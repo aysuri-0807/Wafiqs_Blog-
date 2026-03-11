@@ -3,9 +3,8 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
 $data = [
-    "id" => 1,
-    "name" => "Alex",
-    "status" => "Online"
+  "Test" => "this should show when you request it"
 ];
 
+//sends the data to the user
 echo json_encode($data);
