@@ -12,19 +12,30 @@ Wafiq wants a blog post to be able to share his interesting thoughts and realiza
   
 Target Users:
 Wafiq hopes to cater primarily to people using mobile devices. The premise of the site is to share short conjectures and ideas with people, rather than full articles. 
+
 Static Information:
+
 Basics:
+
 Logo
+
 Information about Wafiq 
+
 Basic navigation tools 
+
 View Profile button 
+
 Potentially incorporate some element of logging in to interact with Wafiq’s posts. 
+
 Design Elements
+
 Wafiq wants us to focus on “celestial” themed design. His ideas are allegedly very complex and go beyond basic day-to-day life, and he wants a website to reflect this. 
+
 User Data to be Displayed:
 Users profile names should be public, as well as an optional profile picture. 
 Each user should have a profile page featuring posts they have interacted with. 
 Users should be able to see a timeline of Wafiq’s posts on the homepage, and he specifically should have permissions to create and delete his posts. (i.e no one else can post) 
+
 Interactive Elements to incorporate
 Any user should be able to react to Wafiq’s posts with a “Like” or “Dislike” as well as comment on it to spark discussion. 
 
