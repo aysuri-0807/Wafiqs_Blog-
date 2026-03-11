@@ -2,6 +2,8 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
+require_once("./db/db.php");
+
 $data = [
   "Test" => "this should show when you request it"
 ];
