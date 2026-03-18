@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Development Plan - Wafiq Wafiq</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <style>
+      :root {
+        --bg-start: #1c2b5e;
+        --bg-end: #0b112c;
+        --card-bg: rgba(36, 54, 107, 0.6);
+        --card-border: rgba(255, 255, 255, 0.25);
+        --accent-cyan: #4bd5d5;
+        --accent-cyan-hover: #3bc5c5;
+        --dropdown-bg: #1c2b5e;
+        --text-secondary: #a3b1c6;
+      }
+
+      body {
+        background: radial-gradient(circle at center, var(--bg-start) 0%, var(--bg-end) 100%);
+        min-height: 100vh;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Starry background */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image:
+          radial-gradient(1.5px 1.5px at 20px 30px, #fff, transparent),
+          radial-gradient(1.5px 1.5px at 150px 150px, #fff, transparent),
+          radial-gradient(1px 1px at 300px 50px, #fff, transparent),
+          radial-gradient(2px 2px at 450px 200px, rgba(255, 255, 255, 0.8), transparent),
+          radial-gradient(1px 1px at 600px 80px, #fff, transparent),
+          radial-gradient(1.5px 1.5px at 750px 250px, rgba(255, 255, 255, 0.6), transparent),
+          radial-gradient(1px 1px at 900px 120px, #fff, transparent);
+        background-size: 1000px 400px;
+        animation: twinkle 5s ease-in-out infinite;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.7;
+      }
+
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 0.9; }
+      }
+
+      /* Navbar styling mimicking the image */
+      .navbar {
+        background: transparent !important;
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+      }
+      .navbar-brand {
+        color: #ffffff !important;
+        font-weight: 700;
+        font-size: 1.25rem;
+      }
+      .btn-profile {
+        background-color: var(--accent-cyan);
+        color: #0b112c;
+        border-radius: 50rem;
+        font-weight: 600;
+        padding: 0.4rem 1.2rem;
+        border: none;
+      }
+      .btn-profile:hover {
+        background-color: var(--accent-cyan-hover);
+        color: #0b112c;
+      }
+      
+      .dropdown-menu {
+        background-color: var(--dropdown-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        margin-top: 0.5rem;
+      }
+      .dropdown-item {
+        color: #ffffff;
+        font-weight: 500;
+        padding: 0.5rem 1.25rem;
+      }
+      .dropdown-item:hover, .dropdown-item:focus {
+        background-color: rgba(255,255,255,0.1);
+        color: #ffffff;
+      }
+      .dropdown-item.text-danger:hover {
+        background-color: rgba(220, 53, 69, 0.1);
+      }
+
+      /* Content Area */
+      .content-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+
+      .page-title {
+        color: #c9b1ff !important;
+        font-weight: 700;
+        font-size: 1.75rem;
+        margin-bottom: 0.2rem;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        color: #c9b1ff !important;
+      }
+      .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+      }
+
+      /* Card styling */
+      .custom-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        backdrop-filter: blur(12px);
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 0, 0, 0.2);
+      }
+      
+      .card-header-custom {
+        border-bottom: 1px solid var(--card-border);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+      }
+
+      .text-accent {
+        color: var(--accent-cyan);
+      }
+
+      /* Table overrides */
+      .table {
+        color: #ffffff;
+        --bs-table-bg: transparent;
+        --bs-table-color: #ffffff;
+        --bs-table-border-color: var(--card-border);
+        margin-bottom: 0;
+      }
+      .table thead th {
+        border-bottom: 2px solid var(--card-border);
+        color: var(--accent-cyan);
+        font-weight: 600;
+        border-top: none;
+      }
+      .table td, .table th {
+        border-color: var(--card-border);
+      }
+
+      pre {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--card-border);
+        border-radius: 0.5rem;
+        color: #e0e6ed !important;
+        padding: 1rem;
+      }
+      code {
+        color: var(--accent-cyan) !important;
+      }
+
+      .img-wireframe {
+        border-radius: 0.5rem;
+        border: 1px solid var(--card-border);
+        width: 100%;
+        height: auto;
+      }
+
+      .wireframe-label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        text-align: center;
+      }
+      
+      .blockquote {
+        font-style: italic;
+        color: #ffffff;
+        border-left: 4px solid var(--accent-cyan);
+        padding-left: 1rem;
+      }
+
+      footer {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        margin-top: 3rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--card-border);
+      }
+    </style>
+  </head>
+  <body>
+ 
+
+    <!-- Main Content mapped to Development Plan -->
+    <div class="content-wrapper">
+      <h1 class="page-title">Development Plan</h1>
+      <p class="page-subtitle">Latest thoughts, updates, and specifications for the Wafiq Wafiq Blog Platform.</p>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">1. Names</h2>
+        </div>
+        <p class="mb-1"><strong>Team Name:</strong> Team Wafiq</p>
+        <p class="mb-1"><strong>Client:</strong> Wafiq Ahmad, Computer Science Student at McMaster University</p>
+        <p class="mb-0"><strong>App Name:</strong> Wafiq Wafiq</p>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">2. Purpose</h2>
+        </div>
+        <p>Wafiq Wafiq is a blog platform designed for Wafiq Ahmad to share his thoughts and postulations with the world. The website is built for a mobile-first accessible format.</p>
+        <p class="mb-2">The platform will function similarly to social media sites like Instagram and Twitter, allowing users to:</p>
+        <ul class="mb-0">
+          <li>View a timeline of Wafiq's posts on the homepage</li>
+          <li>Like or dislike posts</li>
+          <li>Comment on posts to spark discussion</li>
+          <li>Like or dislike comments</li>
+          <li>Share posts</li>
+          <li>View user profiles and interaction history</li>
+        </ul>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">3. Data Description</h2>
+        </div>
+        
+        <h3 class="h6 fw-bold mb-3">Tables Required</h3>
+        <div class="table-responsive mb-4">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Purpose</th>
+                <th>Information Stored</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>users</strong></td>
+                <td>Store user account information</td>
+                <td>User authentication and profile data</td>
+              </tr>
+              <tr>
+                <td><strong>posts</strong></td>
+                <td>Store blog posts created by Wafiq</td>
+                <td>Post content, metadata, likes, and dislikes</td>
+              </tr>
+              <tr>
+                <td><strong>comments</strong></td>
+                <td>Store user comments on posts</td>
+                <td>Comment text, likes, dislikes, and association with users/posts</td>
+              </tr>
+              <tr>
+                <td><strong>post_votes</strong></td>
+                <td>Track user votes on posts</td>
+                <td>Which user liked/disliked which post</td>
+              </tr>
+              <tr>
+                <td><strong>comment_votes</strong></td>
+                <td>Track user votes on comments</td>
+                <td>Which user liked/disliked which comment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h6 fw-bold mb-3">Table Schemas</h3>
+        <pre class="mb-0 overflow-auto"><code>-- Stores user account information
+CREATE TABLE IF NOT EXISTS users (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `username` VARCHAR(50) UNIQUE NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `email` VARCHAR(255) NULL,
+  `show_email` BOOLEAN NOT NULL DEFAULT FALSE,
+  `profile_picture` VARCHAR(255) NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `author_id` INT NOT NULL,
+  `content` TEXT NOT NULL,
+  `likes` INT NOT NULL DEFAULT 0,
+  `dislikes` INT NOT NULL DEFAULT 0,
+  `share_count` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` TIMESTAMP NULL,
+  FOREIGN KEY (`author_id`) REFERENCES users (`id`)
+);
+
+-- Tracks which users voted on which posts
+CREATE TABLE IF NOT EXISTS post_votes (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `post_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `vote_type` ENUM ('like', 'dislike') NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`post_id`) REFERENCES posts (`id`),
+  FOREIGN KEY (`user_id`) REFERENCES users (`id`),
+  UNIQUE KEY `unique_user_post_vote` (`post_id`, `user_id`)
+);
+
+-- Stores user comments on posts
+CREATE TABLE IF NOT EXISTS comments (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `post_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `content` TEXT NOT NULL,
+  `likes` INT NOT NULL DEFAULT 0,
+  `dislikes` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`post_id`) REFERENCES posts (`id`),
+  FOREIGN KEY (`user_id`) REFERENCES users (`id`)
+);
+
+-- Tracks which users voted on which comments
+CREATE TABLE IF NOT EXISTS comment_votes (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `comment_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `vote_type` ENUM ('like', 'dislike') NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`comment_id`) REFERENCES comments (`id`),
+  FOREIGN KEY (`user_id`) REFERENCES users (`id`),
+  UNIQUE KEY `unique_user_comment_vote` (`comment_id`, `user_id`)
+);</code></pre>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">4. Functions Performed by the App</h2>
+        </div>
+
+        <h3 class="h6 fw-bold mb-3">User Functions</h3>
+        <div class="table-responsive mb-4">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Function</th>
+                <th>Description</th>
+                <th>Database Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Register</strong></td>
+                <td>Create a new user account</td>
+                <td>INSERT into <code>users</code></td>
+              </tr>
+              <tr>
+                <td><strong>Login</strong></td>
+                <td>Authenticate user and create session</td>
+                <td>SELECT from <code>users</code></td>
+              </tr>
+              <tr>
+                <td><strong>View Posts</strong></td>
+                <td>Browse Wafiq's posts on homepage</td>
+                <td>SELECT from <code>posts</code> (WHERE <code>deleted_at</code> IS NULL)</td>
+              </tr>
+              <tr>
+                <td><strong>View Profile</strong></td>
+                <td>View a user's profile and interaction history</td>
+                <td>SELECT from <code>users</code>, <code>comments</code></td>
+              </tr>
+              <tr>
+                <td><strong>Like/Dislike Post</strong></td>
+                <td>Like or dislike a post</td>
+                <td>INSERT/UPDATE <code>post_votes</code>, UPDATE <code>posts</code></td>
+              </tr>
+              <tr>
+                <td><strong>Comment on Post</strong></td>
+                <td>Add a comment to a post</td>
+                <td>INSERT into <code>comments</code></td>
+              </tr>
+              <tr>
+                <td><strong>Like/Dislike Comment</strong></td>
+                <td>Like or dislike a comment</td>
+                <td>INSERT/UPDATE <code>comment_votes</code>, UPDATE <code>comments</code></td>
+              </tr>
+              <tr>
+                <td><strong>Share Post</strong></td>
+                <td>Share a post</td>
+                <td>Frontend only (no DB effect)</td>
+              </tr>
+              <tr>
+                <td><strong>Update Profile</strong></td>
+                <td>Edit profile information</td>
+                <td>UPDATE <code>users</code></td>
+              </tr>
+              <tr>
+                <td><strong>Logout</strong></td>
+                <td>End user session</td>
+                <td>Session destruction (no DB effect)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h6 fw-bold mb-3">Admin Functions (Wafiq Only)</h3>
+        <div class="table-responsive mb-4">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Function</th>
+                <th>Description</th>
+                <th>Database Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Create Post</strong></td>
+                <td>Publish a new blog post</td>
+                <td>INSERT into <code>posts</code></td>
+              </tr>
+              <tr>
+                <td><strong>Delete Post</strong></td>
+                <td>Remove a post (soft delete)</td>
+                <td>UPDATE <code>posts</code> SET <code>deleted_at</code></td>
+              </tr>
+              <tr>
+                <td><strong>Manage Posts</strong></td>
+                <td>View all posts including deleted</td>
+                <td>SELECT from <code>posts</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h6 fw-bold mb-3">Client-Side Implementation</h3>
+        <ul class="mb-0">
+          <li><strong>Mobile-First Responsive Design:</strong> CSS media queries and flexible layouts using Bootstrap CSS</li>
+          <li><strong>Accessibility (WCAG):</strong>
+            <ul>
+              <li>Alt text for all images</li>
+              <li>Large font sizes (minimum 16px base)</li>
+              <li>High contrast colors (celestial theme with accessible color combinations)</li>
+              <li>Keyboard navigation support</li>
+              <li>ARIA labels for interactive elements</li>
+            </ul>
+          </li>
+          <li><strong>JavaScript Functionality:</strong>
+            <ul>
+              <li>AJAX for liking/disliking comments without page reload</li>
+              <li>Comments are refetched in an interval</li>
+              <li>Form validation</li>
+              <li>Session management</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">5. Roles of Team Members</h2>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Team Member</th>
+                <th>Responsibilities</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Andy</strong></td>
+                <td>Working on post creation, displaying posts on the home screen, and rendering the post</td>
+              </tr>
+              <tr>
+                <td><strong>Shiva</strong></td>
+                <td>Admin management, including deleting of posts</td>
+              </tr>
+              <tr>
+                <td><strong>Toheeb</strong></td>
+                <td>Will work on user sign up and login, as well as user session to detect whether they are logged in, and editing personal user info</td>
+              </tr>
+              <tr>
+                <td><strong>Steve</strong></td>
+                <td>Will work on comment feature on posts, displaying comments and user interaction (upvoting/downvoting)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">6. Wireframes</h2>
+        </div>
+        <div class="row g-4">
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/landing.jpg" class="img-wireframe" alt="Landing Page Wireframe" />
+            <div class="wireframe-label">Landing</div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/editprofile.jpg" class="img-wireframe" alt="Edit User Profile Wireframe" />
+            <div class="wireframe-label">Edit Profile</div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/postcreator.jpg" class="img-wireframe" alt="Post Creator Wireframe" />
+            <div class="wireframe-label">Post Creator</div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/login.jpg" class="img-wireframe" alt="Login Wireframe" />
+            <div class="wireframe-label">Login</div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/signup.jpg" class="img-wireframe" alt="Signup Wireframe" />
+            <div class="wireframe-label">Signup</div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/posts.jpg" class="img-wireframe" alt="Posts Wireframe" />
+            <div class="wireframe-label">Posts</div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <img src="./assets/wireframe/comments.jpg" class="img-wireframe" alt="Comments Wireframe" />
+            <div class="wireframe-label">Comments</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">7. The Increments</h2>
+        </div>
+        <h3 class="h6 fw-bold mb-3">First Increment (Target: Week 6)</h3>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Team Member</th>
+                <th>Functionality</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Andy</strong></td>
+                <td>Showing posts on the home screen</td>
+              </tr>
+              <tr>
+                <td><strong>Shiva</strong></td>
+                <td>Deleting posts</td>
+              </tr>
+              <tr>
+                <td><strong>Toheeb</strong></td>
+                <td>Login and signup</td>
+              </tr>
+              <tr>
+                <td><strong>Steve</strong></td>
+                <td>Adding comments</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="custom-card">
+        <div class="card-header-custom">
+          <h2 class="h5 fw-bold mb-0 text-accent">8. Client Feedback</h2>
+        </div>
+        
+        <blockquote class="blockquote mb-4">
+          <p class="mb-2">"I want a blog post to be able to share my interesting thoughts and realizations with the world. Users are more likely to be mobile, this would be something that you look at on the most convenient device (most likely a mobile phone)."</p>
+          <footer class="blockquote-footer mt-0 text-white opacity-75">Wafiq Ahmad</footer>
+        </blockquote>
+
+        <h3 class="h6 fw-bold mb-2">Requirements from Wafiq</h3>
+        <ol class="mb-4">
+          <li><strong>Mobile-First Design:</strong> The primary target is mobile users, so the interface must be optimized for mobile devices.</li>
+          <li><strong>Accessibility:</strong> Must follow WCAG standards</li>
+          <li><strong>Celestial Theme:</strong> Design should have a space theme</li>
+          <li><strong>Anonymous Mode:</strong> Users who are not logged in can view comments but cannot make comments</li>
+          <li><strong>Social Media-Like Interactions:</strong> Users should be able to like/dislike posts and comments, comment, and share posts.</li>
+        </ol>
+
+        <h3 class="h6 fw-bold mb-2">Changes Made Based on Feedback</h3>
+        <ul class="mb-0">
+          <li>Added soft-delete functionality for posts instead of hard delete (allows Wafiq to recover accidentally deleted posts)</li>
+          <li>Added <code>show_email</code> column to users table (users can choose to display email alongside username)</li>
+          <li>Prioritized mobile-first responsive design in the wireframes and implementation plan</li>
+          <li>Incorporated celestial theme throughout the design (logo, color scheme, visual elements)</li>
+          <li>Users who are not logged in will not be able to interact with comments in any posts unless they have a user session on the backend</li>
+        </ul>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
