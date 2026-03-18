@@ -1,0 +1,24 @@
+CREATE TABLE
+  IF NOT EXISTS users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_role TEXT NOT NULL DEFAULT 'user',
+    username TEXT NOT NULL,
+    password_hash TEXT NOT NULL
+  );
+
+CREATE TABLE
+  IF NOT EXISTS posts (
+    post_id INT AUTO_INCREMENT PRIMARY KEY,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    content_json JSON NOT NULL,
+    created_at DATETIME NOT NULL
+  );
+
+CREATE TABLE
+  IF NOT EXISTS comments (
+    comment_id INT AUTO_INCREMENT PRIMARY KEY,
+    username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME NOT NULL
+  );

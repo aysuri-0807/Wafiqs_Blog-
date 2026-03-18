@@ -5,24 +5,34 @@ $username   = "root";
 $password   = "";
 $dbname     = "blog_db";
 
-// First connect without database to check if it exists
-$conn = new mysqli($servername, $username, $password);
+try {
+    $db = new PDO("mysql:host=$servername", $username, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
 
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
-}
+    // Check if database exists, create if not
+    $result = $db->query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbname'");
+    $dbExists = $result->rowCount() > 0;
 
-// Check if database exists, create if not
-$result = $conn->query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbname'");
-if ($result->num_rows === 0) {
-  if ($conn->query("CREATE DATABASE $dbname") !== TRUE) {
-    die("Error creating database: " . $conn->error);
-  }
-}
+    if (!$dbExists) {
+        $db->exec("CREATE DATABASE $dbname");
+    }
 
-$conn->close();
-$conn = new mysqli($servername, $username, $password, $dbname);
+    // Reconnect with the database
+    $db = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
 
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
+    // Seed database only if tables don't exist
+    $result = $db->query("SHOW TABLES LIKE 'users'");
+    $hasUsersTable = $result->rowCount() > 0;
+
+    if (!$hasUsersTable) {
+        $seedSql = file_get_contents(__DIR__ . '/../seed.sql');
+        $db->exec($seedSql);
+    }
+} catch (PDOException $e) {
+    die("Database error: " . $e->getMessage());
 }

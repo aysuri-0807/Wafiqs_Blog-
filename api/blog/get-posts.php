@@ -4,15 +4,7 @@ header("Content-Type: application/json; charset=UTF-8");
 
 require_once '../db/db.php';
 
-$sql = "SELECT * FROM posts";
-$result = $conn->query($sql);
-$result = [];
+$statement = $db->query("SELECT * FROM posts");
+$posts = $statement->fetchAll();
 
-while ($row = $result->fetch_assoc()) {
-  $users[] = $row;
-}
-
-$result["posts"] = $users;
-
-//sends the data to the user
-echo json_encode($result);
+echo json_encode(['posts' => $posts]);
