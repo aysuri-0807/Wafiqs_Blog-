@@ -3,7 +3,8 @@ CREATE TABLE
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     user_role TEXT NOT NULL DEFAULT 'user',
     username TEXT NOT NULL,
-    password_hash TEXT NOT NULL
+    password_hash TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
 CREATE TABLE
@@ -12,7 +13,7 @@ CREATE TABLE
     title TEXT NOT NULL,
     author TEXT NOT NULL,
     content_json JSON NOT NULL,
-    created_at DATETIME NOT NULL
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
 CREATE TABLE
@@ -20,5 +21,5 @@ CREATE TABLE
     comment_id INT AUTO_INCREMENT PRIMARY KEY,
     username TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at DATETIME NOT NULL
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
