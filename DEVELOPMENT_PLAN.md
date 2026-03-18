@@ -4,7 +4,7 @@
 
 ## 1. Names
 
-**Team Name**: Team Wafiq
+**Team Name**: Steve Steve
 
 **Client**: Wafiq Ahmad, Computer Science Student at McMaster University
 
