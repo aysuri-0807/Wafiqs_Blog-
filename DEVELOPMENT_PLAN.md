@@ -8,13 +8,13 @@
 
 **Client**: Wafiq Ahmad, Computer Science Student at McMaster University
 
-**App Name**: Wafiq Wafiq
+**App Name**: Wafiq's Postulations
 
 ---
 
 ## 2. Purpose
 
-Wafiq Wafiq is a blog platform designed for Wafiq Ahmad to share his thoughts and postulations with the world. The website is built for a mobile-first accessible format.
+Wafiq's Postulations is a blog platform designed for Wafiq Ahmad to share his thoughts and postulations with the world. The website is built for a mobile-first accessible format.
 
 The platform will function similarly to social media sites like Instagram and Twitter, allowing users to:
 
@@ -22,9 +22,18 @@ The platform will function similarly to social media sites like Instagram and Tw
 - Like or dislike posts
 - Comment on posts to spark discussion
 - Like or dislike comments
-- Share posts
 - View user profiles and interaction history
 
+**Typical User Flow**
+
+1. A user visits the homepage and sees a timeline of posts by Wafiq
+2. The user can scroll through posts without logging in
+3. To interact (like/comment), the user must register or log in
+4. Logged-in users can:
+   - Like/dislike posts
+   - Comment on posts
+   - Like/dislike comments
+5. Wafiq (admin) can create and manage posts through a dashboard
 ---
 
 ## 3. Data Description
@@ -158,20 +167,22 @@ CREATE TABLE
 ## 5. Roles of Team Members
 
 ### Andy
-
-Working on post creation, displaying posts on the home screen, and rendering the post
+- Implement backend API for creating and retrieving posts
+- Develop frontend UI for displaying posts on homepage
 
 ### Shiva
-
-Admin management, including deleting of posts
+- Implement post deletion (soft delete logic)
+- Build admin interface for managing posts
 
 ### Toheeb
-
-Will work on user sign up and login, as well as user session to detect whether they are logged in, and editing personal user info.
+- Implement authentication system (login/signup)
+- Handle session management and user state
+- Develop profile editing functionality
 
 ### Steve
-
-Will work on comment feature on posts, displaying comments and user interaction (upvoting/downvoting).
+- Implement comment system (CRUD operations)
+- Develop UI for displaying comments
+- Implement like/dislike functionality for comments
 
 ## 6. Wireframes
 
@@ -207,6 +218,14 @@ Will work on comment feature on posts, displaying comments and user interaction 
 
 ### First Increment (Target: Week 6)
 
+**Goal:** Deliver a functional app where users can view posts, create accounts, and comment.
+
+**App Capabilities After This Increment:**
+- Users can sign up and log in
+- Users can view posts on the homepage
+- Users can comment on posts
+- Admin can delete posts
+
 | Team Member | Functionality                    |
 | ----------- | -------------------------------- |
 | **Andy**    | Showing posts on the home screen |
@@ -231,7 +250,9 @@ Will work on comment feature on posts, displaying comments and user interaction 
 
 4. **Anonymous Mode**: users who are not logged in can view comments but cannot make comments
 
-5. **Social Media-Like Interactions**: Users should be able to like/dislike posts and comments, comment, and share posts.
+5. **Social Media-Like Interactions**: Users should be able to like/dislike posts and comments, comment, and view my posts.
+
+6. **Permission based system**: I should be the only one able to make posts sharing my thoughts, others should be able to only comment, like, or dislike posts and comments.
 
 **Changes Made Based on Feedback:**
 
