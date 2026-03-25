@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Development Plan</title>
+    <link rel="stylesheet" href="css/devplan-styles.css" />
+  </head>
+  <body>
+    <nav>
+      <div id="nav-left">
+        <a href="/~suria20/team/"
+          ><img id="logo" src="assets/logo.jpg" alt="Go Homepage"
+        /></a>
+        <div>
+          <a href="/~suria20/team">Steve Steve</a>
+          <h3>We. Are. Steve.</h3>
+        </div>
+      </div>
+      <div id="nav-right">
+        <a href="/~suria20/team">Home</a>
+        <a href="/~suria20/team/about">About</a>
+        <a href="/~suria20/team/showcase">Showcase</a>
+        <a href="/~suria20/team/project">Projects</a>
+        <a href="/~suria20/team/devplan">Dev Plan</a>
+      </div>
+    </nav>
+    <section class="container markdown" id="dev-plan">
+      <h1>Development Plan</h1>
+
+      <h2>1. Names</h2>
+      <p><strong>Team Name</strong>: Steve Steve</p>
+      <p>
+        <strong>Client</strong>: Wafiq Ahmad, Computer Science Student at
+        McMaster University
+      </p>
+      <p><strong>App Name</strong>: Wafiq's Postulations</p>
+      <hr />
+
+      <h2>2. Purpose</h2>
+      <p>
+        Wafiq's Postulations is a blog platform designed for Wafiq Ahmad to
+        share his thoughts and postulations with the world. The website is built
+        for a mobile-first accessible format.
+      </p>
+      <p>
+        The platform will function similarly to social media sites like
+        Instagram and Twitter, allowing users to:
+      </p>
+      <ul>
+        <li>View a timeline of Wafiq's posts on the homepage</li>
+        <li>Like or dislike posts</li>
+        <li>Comment on posts to spark discussion</li>
+        <li>Like or dislike comments</li>
+        <li>View user profiles and interaction history</li>
+      </ul>
+      <p><strong>Typical User Flow</strong></p>
+      <ol>
+        <li>
+          A user visits the homepage and sees a timeline of posts by Wafiq
+        </li>
+        <li>The user can scroll through posts without logging in</li>
+        <li>To interact (like/comment), the user must register or log in</li>
+        <li>
+          Logged-in users can:
+          <ul>
+            <li>Like/dislike posts</li>
+            <li>Comment on posts</li>
+            <li>Like/dislike comments</li>
+          </ul>
+        </li>
+        <li>Wafiq (admin) can create and manage posts through a dashboard</li>
+      </ol>
+      <hr />
+
+      <h2>3. Data Description</h2>
+      <h3>Tables Required</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Table</th>
+            <th>Purpose</th>
+            <th>Information Stored</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>users</strong></td>
+            <td>Store user account information</td>
+            <td>User authentication and profile data</td>
+          </tr>
+          <tr>
+            <td><strong>posts</strong></td>
+            <td>Store blog posts created by Wafiq</td>
+            <td>Post content, metadata, likes, and dislikes</td>
+          </tr>
+          <tr>
+            <td><strong>comments</strong></td>
+            <td>Store user comments on posts</td>
+            <td>
+              Comment text, likes, dislikes, and association with users/posts
+            </td>
+          </tr>
+          <tr>
+            <td><strong>post_votes</strong></td>
+            <td>Track user votes on posts</td>
+            <td>Which user liked/disliked which post</td>
+          </tr>
+          <tr>
+            <td><strong>comment_votes</strong></td>
+            <td>Track user votes on comments</td>
+            <td>Which user liked/disliked which comment</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Table Schemas</h3>
+      <pre><code class="language-sql">-- Stores user account information
+CREATE TABLE
+  IF NOT EXISTS users (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(50) UNIQUE NOT NULL,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NULL,
+    `show_email` BOOLEAN NOT NULL DEFAULT FALSE,
+    `profile_picture` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  );
+
+CREATE TABLE
+  IF NOT EXISTS posts (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `author_id` INT NOT NULL,
+    `content` TEXT NOT NULL,
+    `likes` INT NOT NULL DEFAULT 0,
+    `dislikes` INT NOT NULL DEFAULT 0,
+    `share_count` INT NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at` TIMESTAMP NULL,
+    FOREIGN KEY (`author_id`) REFERENCES users (`id`)
+  );
+
+-- Tracks which users voted on which posts
+CREATE TABLE
+  IF NOT EXISTS post_votes (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `post_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `vote_type` ENUM ('like', 'dislike') NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`post_id`) REFERENCES posts (`id`),
+    FOREIGN KEY (`user_id`) REFERENCES users (`id`),
+    UNIQUE KEY `unique_user_post_vote` (`post_id`, `user_id`)
+  );
+
+-- Stores user comments on posts
+CREATE TABLE
+  IF NOT EXISTS comments (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `post_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `content` TEXT NOT NULL,
+    `likes` INT NOT NULL DEFAULT 0,
+    `dislikes` INT NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`post_id`) REFERENCES posts (`id`),
+    FOREIGN KEY (`user_id`) REFERENCES users (`id`)
+  );
+
+-- Tracks which users voted on which comments
+CREATE TABLE
+  IF NOT EXISTS comment_votes (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `comment_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `vote_type` ENUM ('like', 'dislike') NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`comment_id`) REFERENCES comments (`id`),
+    FOREIGN KEY (`user_id`) REFERENCES users (`id`),
+    UNIQUE KEY `unique_user_comment_vote` (`comment_id`, `user_id`)
+  );</code></pre>
+      <hr />
+
+      <h2>4. Functions Performed by the App</h2>
+      <h3>User Functions</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Function</th>
+            <th>Description</th>
+            <th>Database Effect</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Register</strong></td>
+            <td>Create a new user account</td>
+            <td>INSERT into <code>users</code></td>
+          </tr>
+          <tr>
+            <td><strong>Login</strong></td>
+            <td>Authenticate user and create session</td>
+            <td>SELECT from <code>users</code></td>
+          </tr>
+          <tr>
+            <td><strong>View Posts</strong></td>
+            <td>Browse Wafiq's posts on homepage</td>
+            <td>
+              SELECT from <code>posts</code> (WHERE <code>deleted_at</code> IS
+              NULL) <em>meaning he has not deleted the post.</em>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>View Profile</strong></td>
+            <td>View a user's profile and interaction history</td>
+            <td>SELECT from <code>users</code>, <code>comments</code></td>
+          </tr>
+          <tr>
+            <td><strong>Like/Dislike Post</strong></td>
+            <td>Like or dislike a post</td>
+            <td>
+              INSERT/UPDATE <code>post_votes</code>, UPDATE
+              <code>posts</code> SET <code>likes</code>/<code>dislikes</code>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Comment on Post</strong></td>
+            <td>Add a comment to a post</td>
+            <td>INSERT into <code>comments</code></td>
+          </tr>
+          <tr>
+            <td><strong>Like/Dislike Comment</strong></td>
+            <td>Like or dislike a comment</td>
+            <td>
+              INSERT/UPDATE <code>comment_votes</code>, UPDATE
+              <code>comments</code> SET <code>likes</code>/<code>dislikes</code>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Share Post</strong></td>
+            <td>Share a post</td>
+            <td>Frontend only (no DB effect)</td>
+          </tr>
+          <tr>
+            <td><strong>Update Profile</strong></td>
+            <td>Edit profile information</td>
+            <td>UPDATE <code>users</code></td>
+          </tr>
+          <tr>
+            <td><strong>Logout</strong></td>
+            <td>End user session</td>
+            <td>Session destruction (no DB effect)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Admin Functions (Wafiq Only)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Function</th>
+            <th>Description</th>
+            <th>Database Effect</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Create Post</strong></td>
+            <td>Publish a new blog post</td>
+            <td>INSERT into <code>posts</code></td>
+          </tr>
+          <tr>
+            <td><strong>Delete Post</strong></td>
+            <td>Remove a post (soft delete)</td>
+            <td>UPDATE <code>posts</code> SET <code>deleted_at</code></td>
+          </tr>
+          <tr>
+            <td><strong>Manage Posts</strong></td>
+            <td>View all posts including deleted</td>
+            <td>SELECT from <code>posts</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Client-Side Implementation</h3>
+      <ul>
+        <li>
+          <strong>Mobile-First Responsive Design</strong>: CSS media queries and
+          flexible layouts using Bootstrap CSS
+        </li>
+        <li>
+          <strong>Accessibility (WCAG)</strong>:
+          <ul>
+            <li>Alt text for all images</li>
+            <li>Large font sizes (minimum 16px base)</li>
+            <li>
+              High contrast colors (celestial theme with accessible color
+              combinations)
+            </li>
+            <li>Keyboard navigation support</li>
+            <li>ARIA labels for interactive elements</li>
+          </ul>
+        </li>
+        <li>
+          <strong>JavaScript Functionality</strong>:
+          <ul>
+            <li>AJAX for liking/disliking comments without page reload</li>
+            <li>Comments are refetched in an interval</li>
+            <li>Form validation</li>
+            <li>Session management</li>
+          </ul>
+        </li>
+      </ul>
+      <hr />
+
+      <h2>5. Roles of Team Members</h2>
+      <h3>Andy</h3>
+      <ul>
+        <li>Implement backend API for creating and retrieving posts</li>
+        <li>Develop frontend UI for displaying posts on homepage</li>
+      </ul>
+
+      <h3>Shiva</h3>
+      <ul>
+        <li>Implement post deletion (soft delete logic)</li>
+        <li>Build admin interface for managing posts</li>
+      </ul>
+
+      <h3>Toheeb</h3>
+      <ul>
+        <li>Implement authentication system (login/signup)</li>
+        <li>Handle session management and user state</li>
+        <li>Develop profile editing functionality</li>
+      </ul>
+
+      <h3>Steve</h3>
+      <ul>
+        <li>Implement comment system (CRUD operations)</li>
+        <li>Develop UI for displaying comments</li>
+        <li>Implement like/dislike functionality for comments</li>
+      </ul>
+
+      <h2>6. Wireframes</h2>
+      <div class="wireframe-grid">
+        <div class="wireframe-item">
+          <h3>Landing (Mobile)</h3>
+          <img src="assets/wireframe/landing.jpg" alt="Landing Mobile View" />
+        </div>
+        <div class="wireframe-item">
+          <h3>Edit Profile (Mobile)</h3>
+          <img
+            src="assets/wireframe/editprofile.jpg"
+            alt="Edit Profile Mobile View"
+          />
+        </div>
+        <div class="wireframe-item">
+          <h3>Post Creator (Mobile)</h3>
+          <img
+            src="assets/wireframe/postcreator.jpg"
+            alt="Post Creator Mobile View"
+          />
+        </div>
+        <div class="wireframe-item">
+          <h3>Login (Mobile)</h3>
+          <img src="assets/wireframe/login.jpg" alt="Login Mobile View" />
+        </div>
+        <div class="wireframe-item">
+          <h3>Signup (Mobile)</h3>
+          <img src="assets/wireframe/signup.jpg" alt="Signup Mobile View" />
+        </div>
+        <div class="wireframe-item">
+          <h3>Post (Mobile)</h3>
+          <img src="assets/wireframe/posts.jpg" alt="Post Mobile View" />
+        </div>
+        <div class="wireframe-item">
+          <h3>Comments (Mobile)</h3>
+          <img src="assets/wireframe/comments.jpg" alt="Comments Mobile View" />
+        </div>
+      </div>
+
+      <h2>7. The Increments</h2>
+      <h3>First Increment (Target: Week 6)</h3>
+      <p>
+        <strong>Goal:</strong> Deliver a functional app where users can view
+        posts, create accounts, and comment.
+      </p>
+      <p><strong>App Capabilities After This Increment:</strong></p>
+      <ul>
+        <li>Users can sign up and log in</li>
+        <li>Users can view posts on the homepage</li>
+        <li>Users can comment on posts</li>
+        <li>Admin can delete posts</li>
+      </ul>
+      <table>
+        <thead>
+          <tr>
+            <th>Team Member</th>
+            <th>Functionality</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Andy</strong></td>
+            <td>Showing posts on the home screen</td>
+          </tr>
+          <tr>
+            <td><strong>Shiva</strong></td>
+            <td>Deleting posts</td>
+          </tr>
+          <tr>
+            <td><strong>Toheeb</strong></td>
+            <td>Login and signup</td>
+          </tr>
+          <tr>
+            <td><strong>Steve</strong></td>
+            <td>Adding comments</td>
+          </tr>
+        </tbody>
+      </table>
+      <hr />
+
+      <h2>8. Client Feedback</h2>
+      <p><strong>Initial Feedback from Wafiq Ahmad:</strong></p>
+      <blockquote>
+        <p>
+          "I want a blog post to be able to share my interesting thoughts and
+          realizations with the world. Users are more likely to be mobile, this
+          would be something that you look at on the most convenient device
+          (most likely a mobile phone)."
+        </p>
+      </blockquote>
+
+      <p><strong>Requirements from Wafiq</strong></p>
+      <ol>
+        <li>
+          <strong>Mobile-First Design</strong>: The primary target is mobile
+          users, so the interface must be optimized for mobile devices.
+        </li>
+        <li><strong>Accessibility</strong>: Must follow WCAG standards</li>
+        <li>
+          <strong>Celestial Theme</strong>: Design should have a space theme
+        </li>
+        <li>
+          <strong>Anonymous Mode</strong>: users who are not logged in can view
+          comments but cannot make comments
+        </li>
+        <li>
+          <strong>Social Media-Like Interactions</strong>: Users should be able
+          to like/dislike posts and comments, comment, and view my posts.
+        </li>
+        <li>
+          <strong>Permission based system</strong>: I should be the only one
+          able to make posts sharing my thoughts, others should be able to only
+          comment, like, or dislike posts and comments.
+        </li>
+      </ol>
+
+      <p><strong>Changes Made Based on Feedback:</strong></p>
+      <ul>
+        <li>
+          Added soft-delete functionality for posts instead of hard delete
+          (allows Wafiq to recover accidentally deleted posts)
+        </li>
+        <li>
+          Added <code>show_email</code> column to users table (users can choose
+          to display email alongside username)
+        </li>
+        <li>
+          Prioritized mobile-first responsive design in the wireframes and
+          implementation plan
+        </li>
+        <li>
+          Incorporated celestial theme throughout the design (logo, color
+          scheme, visual elements)
+        </li>
+        <li>
+          Users who are not logged in will not be able to interact with comments
+          in any posts unless they have a user session on the backend.
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>
