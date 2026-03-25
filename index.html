@@ -39,33 +39,15 @@
   <main class="container py-4 position-relative">
     <div class="feed-shell">
       <header class="mb-4">
-        <h1 class="h3 fw-bold mb-1">Home</h1>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <h1 class="h3 fw-bold mb-0">Home</h1>
+          <a class="btn btn-info rounded-pill px-3 fw-semibold" href="create-post.html">Create Post</a>
+        </div>
         <p class="feed-subtitle mb-0">Latest thoughts, updates, and stories from McMaster's brightest mind.</p>
       </header>
 
-
-      <section class="tweet-card p-3 p-md-4 mb-3 reveal-on-load">
-        <div class="d-flex gap-3">
-          <div class="avatar-dot bg-dark">DM</div>
-          <div class="w-100">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-              <strong>DEMO TITLE</strong>
-              <span class="text-secondary">@DemoPost</span>
-              <span class="text-secondary">&middot;</span>
-              <span class="text-secondary">TIME SINCE POST</span>
-            </div>
-            <p class="mb-2 text-secondary">
-              Bodytext for a post.
-            </p>
-            <div class="d-flex gap-3 text-secondary small">
-              <span>Reply</span>
-              <span>Repost</span>
-              <span>Like</span>
-              <span>Share</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div id="feed-status" class="feed-subtitle mb-3">Loading posts...</div>
+      <div id="post-feed" aria-live="polite"></div>
     </div>
   </main>
 
