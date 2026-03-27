@@ -197,6 +197,29 @@ body {
 	color: var(--cosmic-muted);
 }
 
+.auth-shell {
+	max-width: 560px;
+	margin: 0 auto;
+	position: relative;
+	z-index: 1;
+}
+
+.auth-card {
+	border: 1px solid var(--cosmic-border);
+	border-radius: 1rem;
+	background: var(--cosmic-panel);
+	backdrop-filter: blur(4px);
+	box-shadow: 0 16px 28px rgba(5, 8, 18, 0.34);
+}
+
+.status-error {
+	color: #ff8a8a;
+}
+
+.status-success {
+	color: #7ef1c0;
+}
+
 @keyframes twinkle {
 	0%,
 	100% {

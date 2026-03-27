@@ -1,9 +1,60 @@
 <?php
-header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-$data = [
-  "Test" => "this should show when you request it"
-];
+require_once "../db/db.php";
 
-echo json_encode($data);
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
+    echo json_encode(["error" => "Method not allowed"]);
+    exit;
+}
+
+$body = json_decode(file_get_contents("php://input"), true);
+if (!is_array($body)) {
+    http_response_code(400);
+    echo json_encode(["error" => "Invalid JSON payload"]);
+    exit;
+}
+
+$identifier = trim((string) ($body["identifier"] ?? $body["username"] ?? $body["email"] ?? ""));
+$password = (string) ($body["password"] ?? "");
+
+if ($identifier === "" || $password === "") {
+    http_response_code(400);
+    echo json_encode(["error" => "Username/email or password is required"]);
+    exit;
+}
+
+// Support both newer schema (id) and older schema (user_id).
+$userIdColumn = "id";
+$idColumnStatement = $db->query("SHOW COLUMNS FROM users LIKE 'id'");
+if ($idColumnStatement->fetch() === false) {
+    $userIdColumn = "user_id";
+}
+
+$statement = $db->prepare("SELECT {$userIdColumn} AS id, username, password_hash, email, show_email FROM users WHERE username = :identifier OR email = :identifier LIMIT 1");
+$statement->execute(["identifier" => $identifier]);
+$user = $statement->fetch();
+
+if (!$user || !password_verify($password, (string) $user["password_hash"])) {
+    http_response_code(401);
+    echo json_encode(["error" => "Invalid username or password"]);
+    exit;
+}
+
+$_SESSION["user_id"] = (int) $user["id"];
+$_SESSION["username"] = (string) $user["username"];
+
+echo json_encode([
+    "message" => "Login successful",
+    "user" => [
+        "id" => (int) $user["id"],
+        "username" => (string) $user["username"],
+        "email" => $user["email"] ?: null,
+        "show_email" => (bool) $user["show_email"],
+    ],
+]);

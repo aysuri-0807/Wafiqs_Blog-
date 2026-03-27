@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
 	const feedNode = document.querySelector("#post-feed");
 	const statusNode = document.querySelector("#feed-status");
+	const accountMenuButton = document.querySelector("#account-menu-button");
+	const loginLinkButton = document.querySelector("#login-link-button");
+	const logoutLink = document.querySelector("#logout-link");
 
 	const escapeHtml = (value) => {
 		return String(value)
@@ -113,8 +116,62 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	};
 
-	fetchAndRenderPosts();
+	const updateAuthUi = async () => {
+		if (!accountMenuButton || !loginLinkButton || !logoutLink) return;
+		const getUserUrl = resolveApiUrl("api/auth/get-user.php");
+		if (!getUserUrl) return;
 
+		try {
+			const response = await fetch(getUserUrl, {
+				credentials: "same-origin",
+			});
+			const data = await response.json();
+			const user = data?.authenticated ? data.user : null;
+
+			if (!user) {
+				accountMenuButton.textContent = "Account";
+				loginLinkButton.classList.remove("d-none");
+				logoutLink.classList.add("disabled");
+				logoutLink.setAttribute("aria-disabled", "true");
+				return;
+			}
+
+			accountMenuButton.textContent = `@${user.username}`;
+			loginLinkButton.classList.add("d-none");
+			logoutLink.classList.remove("disabled");
+			logoutLink.removeAttribute("aria-disabled");
+		} catch (_error) {
+			accountMenuButton.textContent = "Account";
+		}
+	};
+
+	const wireLogout = () => {
+		if (!logoutLink) return;
+		logoutLink.addEventListener("click", async (event) => {
+			event.preventDefault();
+			if (logoutLink.classList.contains("disabled")) return;
+			const logoutUrl = resolveApiUrl("api/auth/logout.php");
+			if (!logoutUrl) {
+				window.location.href = "login.php";
+				return;
+			}
+
+			try {
+				await fetch(logoutUrl, {
+					method: "POST",
+					credentials: "same-origin",
+				});
+			} finally {
+				window.location.href = "login.php";
+			}
+		});
+	};
+
+	fetchAndRenderPosts();
+	updateAuthUi();
+	wireLogout();
+
+	/** @type {HTMLElement | null} */
 	const starsLayer = document.querySelector(".space-stars");
 	if (!starsLayer) {
 		return;
