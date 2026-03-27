@@ -4,7 +4,59 @@ header("Content-Type: application/json; charset=UTF-8");
 
 require_once '../db/db.php';
 
-$statement = $db->query("SELECT p.post_id, p.title, COALESCE(u.username, p.author, 'Unknown') AS author, p.content_json, p.likes, p.dislikes, p.share_count, p.created_at FROM posts p LEFT JOIN users u ON u.user_id = p.author_id WHERE p.deleted_at IS NULL ORDER BY p.created_at DESC");
+function columnExists(PDO $db, string $table, string $column): bool
+{
+	$statement = $db->prepare("SHOW COLUMNS FROM `{$table}` LIKE :column_name");
+	$statement->execute(["column_name" => $column]);
+	return $statement->fetch() !== false;
+}
+
+$postIdColumn = columnExists($db, 'posts', 'post_id') ? 'post_id' : 'id';
+$userIdColumn = columnExists($db, 'users', 'id') ? 'id' : 'user_id';
+
+$hasTitle = columnExists($db, 'posts', 'title');
+$hasAuthor = columnExists($db, 'posts', 'author');
+$hasContentJson = columnExists($db, 'posts', 'content_json');
+$hasContent = columnExists($db, 'posts', 'content');
+$hasLikes = columnExists($db, 'posts', 'likes');
+$hasDislikes = columnExists($db, 'posts', 'dislikes');
+$hasShareCount = columnExists($db, 'posts', 'share_count');
+$hasCreatedAt = columnExists($db, 'posts', 'created_at');
+$hasDeletedAt = columnExists($db, 'posts', 'deleted_at');
+$hasUsername = columnExists($db, 'users', 'username');
+
+$authorFallbackExpr = $hasAuthor ? 'p.author' : 'NULL';
+$authorExpr = $hasUsername
+	? "COALESCE(u.username, {$authorFallbackExpr}, 'Unknown') AS author"
+	: "COALESCE({$authorFallbackExpr}, 'Unknown') AS author";
+
+$select = [
+	"p.{$postIdColumn} AS post_id",
+	$hasTitle ? 'p.title' : "'' AS title",
+	$authorExpr,
+	$hasContentJson
+		? 'p.content_json'
+		: ($hasContent ? 'p.content AS content_json' : "'' AS content_json"),
+	$hasLikes ? 'p.likes' : '0 AS likes',
+	$hasDislikes ? 'p.dislikes' : '0 AS dislikes',
+	$hasShareCount ? 'p.share_count' : '0 AS share_count',
+	$hasCreatedAt ? 'p.created_at' : 'NULL AS created_at',
+];
+
+$sql = "SELECT " . implode(', ', $select) . " FROM posts p";
+if ($hasUsername) {
+	$sql .= " LEFT JOIN users u ON u.{$userIdColumn} = p.author_id";
+}
+if ($hasDeletedAt) {
+	$sql .= " WHERE p.deleted_at IS NULL";
+}
+if ($hasCreatedAt) {
+	$sql .= " ORDER BY p.created_at DESC";
+} else {
+	$sql .= " ORDER BY p.{$postIdColumn} DESC";
+}
+
+$statement = $db->query($sql);
 $posts = $statement->fetchAll();
 
 foreach ($posts as &$post) {

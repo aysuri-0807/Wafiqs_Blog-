@@ -9,6 +9,13 @@ require_once "../db/db.php";
 // Change this later when role policy is finalized.
 const REQUIRED_POST_ROLE = "admin";
 
+function columnExists(PDO $db, string $table, string $column): bool
+{
+    $statement = $db->prepare("SHOW COLUMNS FROM `{$table}` LIKE :column_name");
+    $statement->execute(["column_name" => $column]);
+    return $statement->fetch() !== false;
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(204);
     exit;
@@ -48,7 +55,15 @@ if (!isset($contentJsonInput["comments"]) || !is_array($contentJsonInput["commen
     $contentJsonInput["comments"] = [];
 }
 
-$userStatement = $db->prepare("SELECT user_id, username, user_role FROM users WHERE user_id = :user_id LIMIT 1");
+$userIdColumn = columnExists($db, "users", "id") ? "id" : "user_id";
+$hasUserRoleColumn = columnExists($db, "users", "user_role");
+
+$userSelectFields = ["{$userIdColumn} AS id", "username"];
+if ($hasUserRoleColumn) {
+    $userSelectFields[] = "user_role";
+}
+
+$userStatement = $db->prepare("SELECT " . implode(", ", $userSelectFields) . " FROM users WHERE {$userIdColumn} = :user_id LIMIT 1");
 $userStatement->execute(["user_id" => $userId]);
 $user = $userStatement->fetch();
 
@@ -58,7 +73,7 @@ if (!$user) {
     exit;
 }
 
-if ((string) $user["user_role"] !== REQUIRED_POST_ROLE) {
+if ($hasUserRoleColumn && (string) $user["user_role"] !== REQUIRED_POST_ROLE) {
     http_response_code(403);
     echo json_encode([
         "error" => "You do not have permission to create posts",
@@ -70,13 +85,42 @@ if ((string) $user["user_role"] !== REQUIRED_POST_ROLE) {
 
 $contentJson = json_encode($contentJsonInput, JSON_UNESCAPED_UNICODE);
 
-$insert = $db->prepare("INSERT INTO posts (author_id, title, author, content_json) VALUES (:author_id, :title, :author, :content_json)");
-$insert->execute([
-    "author_id" => (int) $user["user_id"],
-    "title" => $title,
-    "author" => (string) $user["username"],
-    "content_json" => $contentJson,
-]);
+$postColumns = ["author_id"];
+$postParams = [
+    "author_id" => (int) $user["id"],
+];
+
+if (columnExists($db, "posts", "title")) {
+    $postColumns[] = "title";
+    $postParams["title"] = $title;
+}
+
+if (columnExists($db, "posts", "author")) {
+    $postColumns[] = "author";
+    $postParams["author"] = (string) $user["username"];
+}
+
+if (columnExists($db, "posts", "content_json")) {
+    $postColumns[] = "content_json";
+    $postParams["content_json"] = $contentJson;
+} elseif (columnExists($db, "posts", "content")) {
+    $postColumns[] = "content";
+    $postParams["content"] = json_encode([
+        "title" => $title,
+        "text" => $contentJsonInput["blocks"][0]["data"]["text"] ?? "",
+        "blocks" => $contentJsonInput["blocks"],
+        "comments" => $contentJsonInput["comments"],
+    ], JSON_UNESCAPED_UNICODE);
+} else {
+    http_response_code(500);
+    echo json_encode(["error" => "Posts table is missing both content_json and content columns"]);
+    exit;
+}
+
+$placeholders = array_map(static fn(string $column): string => ":{$column}", $postColumns);
+$insertSql = "INSERT INTO posts (" . implode(", ", $postColumns) . ") VALUES (" . implode(", ", $placeholders) . ")";
+$insert = $db->prepare($insertSql);
+$insert->execute($postParams);
 
 echo json_encode([
     "message" => "Successfully created post",
