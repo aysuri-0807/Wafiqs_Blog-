@@ -102,14 +102,14 @@ document.addEventListener("DOMContentLoaded", () => {
 							<div class="avatar-dot">${escapeHtml(initials)}</div>
 							<div class="w-100">
 								<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-									<strong>${escapeHtml(title)}</strong>
+									<a href="post.html?post_id=${escapeHtml(post.post_id)}" class="text-decoration-none" style="color:inherit;"><strong>${escapeHtml(title)}</strong></a>
 									<span class="text-secondary">@${escapeHtml(author)}</span>
 									<span class="text-secondary">&middot;</span>
 									<span class="text-secondary">${escapeHtml(postedAt)}</span>
 								</div>
 								<p class="mb-2 text-secondary post-body">${escapeHtml(body)}</p>
 								<div class="d-flex gap-3 text-secondary small post-actions">
-									<span>Comment</span>
+									<a href="post.html?post_id=${escapeHtml(post.post_id)}" class="text-decoration-none text-secondary">Comment</a>
 									<span>Like ${escapeHtml(likes)}</span>
 									<span>Dislike ${escapeHtml(dislikes)}</span>
 									<span class="text-danger cursor-pointer delete-btn" data-id="${post.id}">Delete</span>
