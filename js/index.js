@@ -84,6 +84,27 @@ document.addEventListener("DOMContentLoaded", () => {
         feedNode.innerHTML = "";
         return;
       }
+      feedNode.addEventListener("click", async (event) => {
+        const btn = event.target.closest(".delete-btn");
+        if (!btn) return;
+
+        const postId = btn.dataset.id;
+        const deleteUrl = `api/blog/delete-post.php?id=${postId}`;
+
+        try {
+          const response = await fetch("api/blog/delete-post.php", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ post_id: Number(postId) }),
+          });
+          if (!response.ok) throw new Error("Failed to delete post");
+          btn.closest(".tweet-card")?.remove();
+        } catch (error) {
+          console.error(error);
+          alert("Could not delete post.");
+        }
+      });
 
       statusNode.textContent = "Latest posts";
       feedNode.innerHTML = posts
@@ -112,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									<a href="post.html?post_id=${escapeHtml(post.post_id)}" class="text-decoration-none text-secondary">Comment</a>
 									<span>Like ${escapeHtml(likes)}</span>
 									<span>Dislike ${escapeHtml(dislikes)}</span>
-									<span class="text-danger cursor-pointer delete-btn" data-id="${post.id}">Delete</span>
+									<span class="text-danger cursor-pointer delete-btn" data-id="${escapeHtml(post.post_id)}">Delete</span>
 								</div>
 							</div>
 						</div>
