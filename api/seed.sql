@@ -15,6 +15,7 @@ CREATE TABLE
   IF NOT EXISTS posts (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `author_id` INT NOT NULL,
+    `title` VARCHAR(140) NOT NULL,
     `content` TEXT NOT NULL,
     `likes` INT NOT NULL DEFAULT 0,
     `dislikes` INT NOT NULL DEFAULT 0,
