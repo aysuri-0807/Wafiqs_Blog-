@@ -5,6 +5,19 @@ document.addEventListener("DOMContentLoaded", () => {
 	const postIdInput = document.querySelector("#comment-post-id");
 	const contentInput = document.querySelector("#comment-content");
 
+	const card = document.querySelector(".reveal-on-load");
+	if (card) {
+		setTimeout(() => {
+			card.classList.add("is-visible");
+		}, 180);
+	}
+	const params = new URLSearchParams(window.location.search);
+	const postIdFromUrl = params.get("post_id");
+	if (postIdFromUrl && postIdInput) {
+		postIdInput.value = postIdFromUrl;
+		postIdInput.readOnly = true; // prevent user from changing it
+	}
+
 	if (!commentForm || !statusNode || !userIdInput || !postIdInput || !contentInput) {
 		return;
 	}
@@ -81,13 +94,15 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (!response.ok) {
 				const apiMessage =
 					(payload && payload.error)
-						|| rawBody
-						|| "Unable to post comment";
+					|| rawBody
+					|| "Unable to post comment";
 				throw new Error(apiMessage);
 			}
 
-			setStatus("Comment posted successfully!", "success");
-			commentForm.reset();
+			setStatus("Comment posted successfully! Redirecting...", "success");
+			setTimeout(() => {
+				window.location.href = `post.html?post_id=${postId}`;
+			}, 900);
 		} catch (error) {
 			setStatus(error.message || "Something went wrong.", "error");
 		}
