@@ -293,21 +293,4 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchAndRenderPosts();
   updateAuthUi();
   wireLogout();
-
-  /** @type {HTMLElement | null} */
-  const starsLayer = document.querySelector(".space-stars");
-  if (!starsLayer) {
-    return;
-  }
-
-  let tick = 0;
-  const driftStars = () => {
-    tick += 1;
-    const x = (tick * 0.03) % 340;
-    const y = (tick * 0.012) % 240;
-    starsLayer.style.backgroundPosition = `${x}px ${y}px`;
-    requestAnimationFrame(driftStars);
-  };
-
-  requestAnimationFrame(driftStars);
 });

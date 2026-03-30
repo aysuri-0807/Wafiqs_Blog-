@@ -120,17 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	};
 
-	const starsLayer = document.querySelector(".space-stars");
-	if (starsLayer) {
-		let tick = 0;
-		const drift = () => {
-			tick++;
-			starsLayer.style.backgroundPosition = `${(tick * 0.03) % 340}px ${(tick * 0.012) % 240}px`;
-			requestAnimationFrame(drift);
-		};
-		requestAnimationFrame(drift);
-	}
-
 	if (!postId) {
 		postStatus.textContent = "No post specified.";
 		return;

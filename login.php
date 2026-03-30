@@ -20,9 +20,15 @@
   </head>
   <body>
     <div class="space-stars" aria-hidden="true"></div>
+    <div class="space-sparkles" aria-hidden="true"></div>
+    <div class="space-orbits" aria-hidden="true">
+      <span class="planet planet-primary"></span>
+      <span class="planet planet-secondary"></span>
+      <span class="planet planet-tertiary"></span>
+    </div>
 
     <nav class="navbar navbar-expand-lg border-bottom sticky-top cosmic-nav">
-      <div class="container">
+      <div class="container-fluid px-4 px-lg-5">
         <a class="navbar-brand fw-bold" href="index.html">Wafiq's Postulations</a>
         <a class="btn btn-outline-info rounded-pill px-3 ms-auto" href="index.html">Back Home</a>
       </div>
@@ -101,6 +107,7 @@
       </div>
     </main>
 
+    <script src="js/cosmos.js"></script>
     <script src="js/auth.js"></script>
   </body>
 </html>
