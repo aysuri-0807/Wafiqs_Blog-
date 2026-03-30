@@ -85,25 +85,90 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       feedNode.addEventListener("click", async (event) => {
-        const btn = event.target.closest(".delete-btn");
-        if (!btn) return;
+        const voteBtn = event.target.closest(".post-vote-btn");
+        if (voteBtn) {
+          const postId = Number(voteBtn.dataset.id);
+          const voteType = voteBtn.dataset.voteType;
+          const card = voteBtn.closest(".tweet-card");
 
-        const postId = btn.dataset.id;
-        const deleteUrl = `api/blog/delete-post.php?id=${postId}`;
+          if (!Number.isInteger(postId) || postId <= 0 || (voteType !== "like" && voteType !== "dislike") || !card) {
+            return;
+          }
 
-        try {
-          const response = await fetch("api/blog/delete-post.php", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ post_id: Number(postId) }),
-          });
-          if (!response.ok) throw new Error("Failed to delete post");
-          btn.closest(".tweet-card")?.remove();
-        } catch (error) {
-          console.error(error);
-          alert("Could not delete post.");
+          if (!user) {
+            window.location.href = "login.php";
+            return;
+          }
+
+          const voteApiUrl = resolveApiUrl("api/blog/vote-post.php");
+          if (!voteApiUrl) {
+            alert("Could not reach vote API.");
+            return;
+          }
+
+          voteBtn.disabled = true;
+          try {
+            const response = await fetch(voteApiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({
+                post_id: postId,
+                vote_type: voteType,
+              }),
+            });
+
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload) {
+              throw new Error((payload && payload.error) || "Could not save vote");
+            }
+
+            const likesNode = card.querySelector("[data-role='post-likes']");
+            const dislikesNode = card.querySelector("[data-role='post-dislikes']");
+            if (likesNode) likesNode.textContent = String(Number(payload.likes || 0));
+            if (dislikesNode) dislikesNode.textContent = String(Number(payload.dislikes || 0));
+
+            card.querySelectorAll(".post-vote-btn").forEach((button) => {
+              const selected = button.dataset.voteType === payload.user_vote;
+              button.classList.toggle("is-active", Boolean(selected));
+            });
+          } catch (error) {
+            alert(error.message || "Could not save vote");
+          } finally {
+            voteBtn.disabled = false;
+          }
+
+          return;
         }
+
+        const btn = event.target.closest(".delete-btn");
+        if (btn) {
+          const postId = btn.dataset.id;
+
+          try {
+            const response = await fetch("api/blog/delete-post.php", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ post_id: Number(postId) }),
+            });
+            if (!response.ok) throw new Error("Failed to delete post");
+            btn.closest(".tweet-card")?.remove();
+          } catch (error) {
+            console.error(error);
+            alert("Could not delete post.");
+          }
+          return;
+        }
+
+        const postCard = event.target.closest(".open-post-card");
+        if (!postCard) return;
+
+        const postUrl = postCard.dataset.postUrl;
+        if (!postUrl) return;
+
+        event.preventDefault();
+        window.open(postUrl, "_blank", "noopener");
       });
 
       statusNode.textContent = "Latest posts";
@@ -114,26 +179,32 @@ document.addEventListener("DOMContentLoaded", () => {
           const body = post.body_text || "";
           const likes = Number(post.likes || 0);
           const dislikes = Number(post.dislikes || 0);
-          const shares = Number(post.share_count || 0);
+          const commentCount = Number(post.comment_count || 0);
+          const userVote = post.user_vote === "like" || post.user_vote === "dislike" ? post.user_vote : null;
+          const postUrl = `post.html?post_id=${escapeHtml(post.post_id)}`;
+          const canDelete = user && Number(user.id) === Number(post.author_id);
+          const deleteAction = canDelete
+            ? `<span class="text-danger cursor-pointer delete-btn" data-id="${escapeHtml(post.post_id)}">Delete</span>`
+            : "";
           const postedAt = relativeTimeFromDate(post.created_at);
           const initials = initialsFromAuthor(author);
           return `
-					<section class="tweet-card p-3 p-md-4 mb-3 reveal-on-load">
+          <section class="tweet-card p-3 p-md-4 mb-3 reveal-on-load open-post-card" data-post-url="${postUrl}" role="button" tabindex="0" aria-label="Open post ${escapeHtml(title)} in new tab">
 						<div class="d-flex gap-3">
 							<div class="avatar-dot">${escapeHtml(initials)}</div>
 							<div class="w-100">
 								<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-									<a href="post.html?post_id=${escapeHtml(post.post_id)}" class="text-decoration-none" style="color:inherit;"><strong>${escapeHtml(title)}</strong></a>
+                  <a href="${postUrl}" class="text-decoration-none open-post-link" style="color:inherit;"><strong>${escapeHtml(title)}</strong></a>
 									<span class="text-secondary">@${escapeHtml(author)}</span>
 									<span class="text-secondary">&middot;</span>
 									<span class="text-secondary">${escapeHtml(postedAt)}</span>
 								</div>
 								<p class="mb-2 text-secondary post-body">${escapeHtml(body)}</p>
 								<div class="d-flex gap-3 text-secondary small post-actions">
-									<a href="post.html?post_id=${escapeHtml(post.post_id)}" class="text-decoration-none text-secondary">Comment</a>
-									<span>Like ${escapeHtml(likes)}</span>
-									<span>Dislike ${escapeHtml(dislikes)}</span>
-									<span class="text-danger cursor-pointer delete-btn" data-id="${escapeHtml(post.post_id)}">Delete</span>
+                  <a href="${postUrl}" class="text-decoration-none text-secondary open-post-link">Comments (${escapeHtml(commentCount)})</a>
+                  <button type="button" class="post-vote-btn vote-chip vote-like ${userVote === "like" ? "is-active" : ""}" data-id="${escapeHtml(post.post_id)}" data-vote-type="like">Like <span data-role="post-likes">${escapeHtml(likes)}</span></button>
+                  <button type="button" class="post-vote-btn vote-chip vote-dislike ${userVote === "dislike" ? "is-active" : ""}" data-id="${escapeHtml(post.post_id)}" data-vote-type="dislike">Dislike <span data-role="post-dislikes">${escapeHtml(dislikes)}</span></button>
+                  ${deleteAction}
 								</div>
 							</div>
 						</div>

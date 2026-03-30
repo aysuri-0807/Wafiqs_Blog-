@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "../db/db.php";
+require_once __DIR__ . "/../db/db.php";
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();

@@ -4,7 +4,7 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "../db/db.php";
+require_once __DIR__ . "/../db/db.php";
 
 // Change this later when role policy is finalized.
 const REQUIRED_POST_ROLE = "admin";

@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const commentsStatus = document.querySelector("#comments-status");
 	const commentsContainer = document.querySelector("#comments-container");
 	const addCommentLink = document.querySelector("#add-comment-link");
+	let currentUserId = null;
 
 	const params = new URLSearchParams(window.location.search);
 	const postId = params.get("post_id");
@@ -38,6 +39,81 @@ document.addEventListener("DOMContentLoaded", () => {
 	const resolveApiUrl = (path) => {
 		if (window.location.protocol === "file:") return null;
 		return new URL(path, window.location.href).toString();
+	};
+
+	const fetchCurrentUser = async () => {
+		const url = resolveApiUrl("api/auth/get-user.php");
+		if (!url) return null;
+
+		try {
+			const response = await fetch(url, { credentials: "same-origin" });
+			const payload = await response.json();
+			if (!response.ok || !payload?.authenticated || !payload?.user) {
+				return null;
+			}
+			return payload.user;
+		} catch (_error) {
+			return null;
+		}
+	};
+
+	const handleCommentVote = async (button) => {
+		const commentId = Number(button.dataset.commentId);
+		const voteType = button.dataset.voteType;
+		const card = button.closest(".comment-card");
+
+		if (!Number.isInteger(commentId) || commentId <= 0 || (voteType !== "like" && voteType !== "dislike") || !card) {
+			return;
+		}
+
+		if (!currentUserId) {
+			commentsStatus.textContent = "Log in first to vote on comments.";
+			setTimeout(() => {
+				window.location.href = "login.php";
+			}, 700);
+			return;
+		}
+
+		const url = resolveApiUrl("api/blog/vote-comment.php");
+		if (!url) {
+			commentsStatus.textContent = "Could not reach vote API.";
+			return;
+		}
+
+		button.disabled = true;
+
+		try {
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				credentials: "same-origin",
+				body: JSON.stringify({
+					comment_id: commentId,
+					vote_type: voteType,
+				}),
+			});
+
+			const payload = await response.json().catch(() => null);
+			if (!response.ok || !payload) {
+				throw new Error((payload && payload.error) || "Could not save vote");
+			}
+
+			const likesNode = card.querySelector("[data-role='comment-likes']");
+			const dislikesNode = card.querySelector("[data-role='comment-dislikes']");
+			if (likesNode) likesNode.textContent = String(Number(payload.likes || 0));
+			if (dislikesNode) dislikesNode.textContent = String(Number(payload.dislikes || 0));
+
+			card.querySelectorAll(".comment-vote-btn").forEach((voteButton) => {
+				const selected = voteButton.dataset.voteType === payload.user_vote;
+				voteButton.classList.toggle("is-active", Boolean(selected));
+			});
+		} catch (error) {
+			commentsStatus.textContent = error.message || "Could not save vote.";
+		} finally {
+			button.disabled = false;
+		}
 	};
 
 	const revealCards = () => {
@@ -140,8 +216,11 @@ document.addEventListener("DOMContentLoaded", () => {
 				const author = comment.author || "Unknown";
 				const initials = initialsFromAuthor(author);
 				const postedAt = relativeTimeFromDate(comment.created_at);
+				const likes = Number(comment.likes || 0);
+				const dislikes = Number(comment.dislikes || 0);
+				const userVote = comment.user_vote === "like" || comment.user_vote === "dislike" ? comment.user_vote : null;
 				return `
-					<div class="tweet-card p-3 mb-2 reveal-on-load">
+					<div class="tweet-card p-3 mb-2 reveal-on-load comment-card">
 						<div class="d-flex gap-3">
 							<div class="avatar-dot" style="width:36px;height:36px;font-size:0.75rem;">${escapeHtml(initials)}</div>
 							<div class="w-100">
@@ -150,7 +229,15 @@ document.addEventListener("DOMContentLoaded", () => {
 									<span class="text-secondary">&middot;</span>
 									<span class="text-secondary">${escapeHtml(postedAt)}</span>
 								</div>
-								<p class="mb-0 text-secondary">${escapeHtml(comment.content)}</p>
+								<p class="mb-2 text-secondary">${escapeHtml(comment.content)}</p>
+								<div class="d-flex gap-2">
+									<button type="button" class="comment-vote-btn vote-chip vote-like ${userVote === "like" ? "is-active" : ""}" data-comment-id="${escapeHtml(comment.comment_id)}" data-vote-type="like">
+										Like <span data-role="comment-likes">${escapeHtml(likes)}</span>
+									</button>
+									<button type="button" class="comment-vote-btn vote-chip vote-dislike ${userVote === "dislike" ? "is-active" : ""}" data-comment-id="${escapeHtml(comment.comment_id)}" data-vote-type="dislike">
+										Dislike <span data-role="comment-dislikes">${escapeHtml(dislikes)}</span>
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>`;
@@ -162,5 +249,19 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	};
 
-	fetchPost();
+	if (commentsContainer) {
+		commentsContainer.addEventListener("click", async (event) => {
+			const button = event.target.closest(".comment-vote-btn");
+			if (!button) return;
+			await handleCommentVote(button);
+		});
+	}
+
+	fetchCurrentUser()
+		.then((user) => {
+			currentUserId = user ? Number(user.id) : null;
+		})
+		.finally(() => {
+			fetchPost();
+		});
 });

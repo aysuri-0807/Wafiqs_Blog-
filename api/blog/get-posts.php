@@ -2,7 +2,13 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once '../db/db.php';
+require_once __DIR__ . '/../db/db.php';
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+	session_start();
+}
+
+$currentUserId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 
 function columnExists(PDO $db, string $table, string $column): bool
 {
@@ -18,12 +24,21 @@ $hasTitle = columnExists($db, 'posts', 'title');
 $hasAuthor = columnExists($db, 'posts', 'author');
 $hasContentJson = columnExists($db, 'posts', 'content_json');
 $hasContent = columnExists($db, 'posts', 'content');
+$hasAuthorId = columnExists($db, 'posts', 'author_id');
 $hasLikes = columnExists($db, 'posts', 'likes');
 $hasDislikes = columnExists($db, 'posts', 'dislikes');
 $hasShareCount = columnExists($db, 'posts', 'share_count');
 $hasCreatedAt = columnExists($db, 'posts', 'created_at');
 $hasDeletedAt = columnExists($db, 'posts', 'deleted_at');
 $hasUsername = columnExists($db, 'users', 'username');
+$hasPostVotes = columnExists($db, 'post_votes', 'vote_type') && columnExists($db, 'post_votes', 'post_id') && columnExists($db, 'post_votes', 'user_id');
+$hasCommentsTable = false;
+try {
+	$commentsTableStatement = $db->query("SHOW TABLES LIKE 'comments'");
+	$hasCommentsTable = $commentsTableStatement !== false && $commentsTableStatement->fetch() !== false;
+} catch (Throwable $error) {
+	$hasCommentsTable = false;
+}
 
 $authorFallbackExpr = $hasAuthor ? 'p.author' : 'NULL';
 $authorExpr = $hasUsername
@@ -32,6 +47,7 @@ $authorExpr = $hasUsername
 
 $select = [
 	"p.{$postIdColumn} AS post_id",
+	$hasAuthorId ? 'p.author_id' : '0 AS author_id',
 	$hasTitle ? 'p.title' : "'' AS title",
 	$authorExpr,
 	$hasContentJson
@@ -41,11 +57,16 @@ $select = [
 	$hasDislikes ? 'p.dislikes' : '0 AS dislikes',
 	$hasShareCount ? 'p.share_count' : '0 AS share_count',
 	$hasCreatedAt ? 'p.created_at' : 'NULL AS created_at',
+	$hasCommentsTable ? "(SELECT COUNT(*) FROM comments c WHERE c.post_id = p.{$postIdColumn}) AS comment_count" : '0 AS comment_count',
+	$hasPostVotes && $currentUserId > 0 ? 'pv.vote_type AS user_vote' : 'NULL AS user_vote',
 ];
 
 $sql = "SELECT " . implode(', ', $select) . " FROM posts p";
 if ($hasUsername) {
 	$sql .= " LEFT JOIN users u ON u.{$userIdColumn} = p.author_id";
+}
+if ($hasPostVotes && $currentUserId > 0) {
+	$sql .= " LEFT JOIN post_votes pv ON pv.post_id = p.{$postIdColumn} AND pv.user_id = :current_user_id";
 }
 if ($hasDeletedAt) {
 	$sql .= " WHERE p.deleted_at IS NULL";
@@ -55,8 +76,12 @@ if ($hasCreatedAt) {
 } else {
 	$sql .= " ORDER BY p.{$postIdColumn} DESC";
 }
-
-$statement = $db->query($sql);
+$statement = $db->prepare($sql);
+if ($hasPostVotes && $currentUserId > 0) {
+	$statement->execute(['current_user_id' => $currentUserId]);
+} else {
+	$statement->execute();
+}
 $posts = $statement->fetchAll();
 
 foreach ($posts as &$post) {
