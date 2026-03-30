@@ -53,8 +53,8 @@
 
           <form id="login-form" class="auth-form">
             <div class="mb-3">
-              <label class="compose-label" for="login-identifier">Username or Email</label>
-              <input class="compose-input" id="login-identifier" name="identifier" autocomplete="username" required />
+              <label class="compose-label" for="login-username">Username</label>
+              <input class="compose-input" id="login-username" name="username" autocomplete="username" required />
             </div>
             <div class="mb-3">
               <label class="compose-label" for="login-password">Password</label>

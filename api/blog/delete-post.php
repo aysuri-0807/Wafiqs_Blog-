@@ -5,6 +5,10 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
 require_once "../db/db.php";
+require_once "../auth/guards.php";
+
+// admin only action. everything below will only run if the user is an admin
+requireRole($db, "admin");
 
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(204);

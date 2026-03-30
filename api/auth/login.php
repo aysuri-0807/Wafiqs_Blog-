@@ -20,12 +20,12 @@ if (!is_array($body)) {
     exit;
 }
 
-$identifier = trim((string) ($body["identifier"] ?? $body["username"] ?? $body["email"] ?? ""));
+$username = trim((string) ($body["username"] ?? ""));
 $password = (string) ($body["password"] ?? "");
 
-if ($identifier === "" || $password === "") {
+if ($username === "" || $password === "") {
     http_response_code(400);
-    echo json_encode(["error" => "Username/email or password is required"]);
+    echo json_encode(["error" => "Username or password is required"]);
     exit;
 }
 
@@ -36,8 +36,8 @@ if ($idColumnStatement->fetch() === false) {
     $userIdColumn = "user_id";
 }
 
-$statement = $db->prepare("SELECT {$userIdColumn} AS id, username, password_hash, email, show_email FROM users WHERE username = :identifier OR email = :identifier LIMIT 1");
-$statement->execute(["identifier" => $identifier]);
+$statement = $db->prepare("SELECT {$userIdColumn} AS id, username, password_hash, email, show_email FROM users WHERE username = :username LIMIT 1");
+$statement->execute(["username" => $username]);
 $user = $statement->fetch();
 
 if (!$user || !password_verify($password, (string) $user["password_hash"])) {

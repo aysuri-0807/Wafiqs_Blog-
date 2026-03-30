@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 	const commentForm = document.querySelector("#create-comment-form");
 	const statusNode = document.querySelector("#comment-status");
-	const userIdInput = document.querySelector("#comment-user-id");
 	const postIdInput = document.querySelector("#comment-post-id");
 	const contentInput = document.querySelector("#comment-content");
 
@@ -18,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		postIdInput.readOnly = true; // prevent user from changing it
 	}
 
-	if (!commentForm || !statusNode || !userIdInput || !postIdInput || !contentInput) {
+	if (!commentForm || !statusNode || !postIdInput || !contentInput) {
 		return;
 	}
 
@@ -42,17 +41,28 @@ document.addEventListener("DOMContentLoaded", () => {
 		return new URL(path, window.location.href).toString();
 	};
 
+	const requireLoggedIn = async () => {
+		const getUserUrl = resolveApiUrl("api/auth/get-user.php");
+		if (!getUserUrl) return;
+		try {
+			const resp = await fetch(getUserUrl, { credentials: "same-origin" });
+			const data = await resp.json();
+			if (!data?.authenticated) {
+				window.location.href = "login.php";
+			}
+		} catch {
+			// If session check fails, still allow API to enforce auth.
+		}
+	};
+
+	requireLoggedIn();
+
 	commentForm.addEventListener("submit", async (event) => {
 		event.preventDefault();
 
-		const userId = Number(userIdInput.value);
 		const postId = Number(postIdInput.value);
 		const contentText = contentInput.value.trim();
 
-		if (!Number.isInteger(userId) || userId <= 0) {
-			setStatus("Enter a valid user ID.", "error");
-			return;
-		}
 		if (!Number.isInteger(postId) || postId <= 0) {
 			setStatus("Enter a valid post ID.", "error");
 			return;
@@ -77,7 +87,6 @@ document.addEventListener("DOMContentLoaded", () => {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					user_id: userId,
 					post_id: postId,
 					content: contentText,
 				}),

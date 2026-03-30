@@ -1,9 +1,33 @@
+const resolveApiUrl = (path) => {
+  if (window.location.protocol === "file:") {
+    return null;
+  }
+
+  return new URL(path, window.location.href).toString();
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   const feedNode = document.querySelector("#post-feed");
   const statusNode = document.querySelector("#feed-status");
   const accountMenuButton = document.querySelector("#account-menu-button");
   const loginLinkButton = document.querySelector("#login-link-button");
   const logoutLink = document.querySelector("#logout-link");
+  const createPostButton = document.getElementById("create-post-button");
+  const updateAdminUi = (user) => {
+    const isAdmin = Boolean(user && user.role === "admin");
+    if (createPostButton) {
+      createPostButton.style.visibility = isAdmin ? "visible" : "hidden";
+    }
+
+    document.querySelectorAll(".delete-btn").forEach((node) => {
+      /** @type {HTMLElement} */ (node).style.display = isAdmin ? "inline" : "none";
+      if (!isAdmin) {
+        node.setAttribute("aria-hidden", "true");
+      } else {
+        node.removeAttribute("aria-hidden");
+      }
+    });
+  };
 
   const escapeHtml = (value) => {
     return String(value)
@@ -41,23 +65,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const resolveApiUrl = (path) => {
-    if (window.location.protocol === "file:") {
-      return null;
-    }
-
-    return new URL(path, window.location.href).toString();
-  };
-
   const fetchAndRenderPosts = async () => {
     if (!feedNode || !statusNode) return;
 
     const getUserUrl = resolveApiUrl("api/auth/get-user.php");
     let user = null;
     try {
-      const userResp = await fetch(getUserUrl, { credentials: "same-origin" });
+      if (getUserUrl) {
+        const userResp = await fetch(getUserUrl, { credentials: "same-origin" });
       const userData = await userResp.json();
       user = userData?.authenticated ? userData.user : null;
+      }
     } catch (e) {
       console.warn("Could not verify user session for delete permissions.");
     }
@@ -85,10 +103,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       feedNode.addEventListener("click", async (event) => {
-        const btn = event.target.closest(".delete-btn");
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        const btn = target ? target.closest(".delete-btn") : null;
         if (!btn) return;
 
-        const postId = btn.dataset.id;
+        const postId = /** @type {HTMLElement} */ (btn).dataset.id;
         const deleteUrl = `api/blog/delete-post.php?id=${postId}`;
 
         try {
@@ -133,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									<a href="post.html?post_id=${escapeHtml(post.post_id)}" class="text-decoration-none text-secondary">Comment</a>
 									<span>Like ${escapeHtml(likes)}</span>
 									<span>Dislike ${escapeHtml(dislikes)}</span>
-									<span class="text-danger cursor-pointer delete-btn" data-id="${escapeHtml(post.post_id)}">Delete</span>
+									<span class="text-danger cursor-pointer delete-btn" data-id="${escapeHtml(post.post_id)}" style="display:none;">Delete</span>
 								</div>
 							</div>
 						</div>
@@ -141,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .join("");
 
+      updateAdminUi(user);
       renderCardsWithReveal();
     } catch (error) {
       statusNode.textContent =
@@ -166,6 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loginLinkButton.classList.remove("d-none");
         logoutLink.classList.add("disabled");
         logoutLink.setAttribute("aria-disabled", "true");
+        updateAdminUi(null);
         return;
       }
 
@@ -173,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loginLinkButton.classList.add("d-none");
       logoutLink.classList.remove("disabled");
       logoutLink.removeAttribute("aria-disabled");
+      updateAdminUi(user);
     } catch (_error) {
       accountMenuButton.textContent = "Account";
     }

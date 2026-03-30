@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const commentsStatus = document.querySelector("#comments-status");
 	const commentsContainer = document.querySelector("#comments-container");
 	const addCommentLink = document.querySelector("#add-comment-link");
+	let isAdmin = false;
 
 	const params = new URLSearchParams(window.location.search);
 	const postId = params.get("post_id");
@@ -38,6 +39,18 @@ document.addEventListener("DOMContentLoaded", () => {
 	const resolveApiUrl = (path) => {
 		if (window.location.protocol === "file:") return null;
 		return new URL(path, window.location.href).toString();
+	};
+
+	const fetchViewer = async () => {
+		const url = resolveApiUrl("api/auth/get-user.php");
+		if (!url) return null;
+		try {
+			const resp = await fetch(url, { credentials: "same-origin" });
+			const data = await resp.json();
+			return data?.authenticated ? data.user : null;
+		} catch {
+			return null;
+		}
 	};
 
 	const revealCards = () => {
@@ -108,6 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
 								<span class="text-secondary">${escapeHtml(postedAt)}</span>
 							</div>
 							<p class="mb-0 post-body">${escapeHtml(body)}</p>
+							<div class="mt-3" style="${isAdmin ? "" : "display:none;"}">
+								<button id="delete-post-button" class="btn btn-outline-danger rounded-pill px-3 fw-semibold" type="button">
+									Delete Post
+								</button>
+							</div>
 						</div>
 					</div>
 				</section>`;
@@ -118,6 +136,34 @@ document.addEventListener("DOMContentLoaded", () => {
 		} catch (err) {
 			postStatus.textContent = "Could not load post. Make sure the PHP server is running.";
 		}
+	};
+
+	const wireDelete = () => {
+		postContainer.addEventListener("click", async (event) => {
+			const target = event.target instanceof HTMLElement ? event.target : null;
+			const button = target ? target.closest("#delete-post-button") : null;
+			if (!button) return;
+			if (!isAdmin) return;
+
+			const deleteUrl = resolveApiUrl("api/blog/delete-post.php");
+			if (!deleteUrl) return;
+
+			try {
+				const response = await fetch(deleteUrl, {
+					method: "POST",
+					credentials: "same-origin",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ post_id: Number(postId) }),
+				});
+				const data = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(data.error || "Failed to delete post");
+				}
+				window.location.href = "index.html";
+			} catch (error) {
+				alert(error.message || "Could not delete post.");
+			}
+		});
 	};
 
 	const fetchComments = async () => {
@@ -162,5 +208,10 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	};
 
-	fetchPost();
+	(async () => {
+		const viewer = await fetchViewer();
+		isAdmin = Boolean(viewer && viewer.role === "admin");
+		wireDelete();
+		await fetchPost();
+	})();
 });

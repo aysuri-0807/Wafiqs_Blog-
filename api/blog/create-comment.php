@@ -6,6 +6,8 @@ header("Content-Type: application/json; charset=UTF-8");
 
 require_once "../db/db.php";
 
+require_once "../auth/guards.php";
+
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(204);
     exit;
@@ -17,30 +19,23 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+$user = getAuthUser($db);
+$userId = (int) $user["id"];
+
 $body = json_decode(file_get_contents("php://input"), true);
 
-if (!isset($body["user_id"]) || !isset($body["post_id"]) || !isset($body["content"])) {
+if (!isset($body["post_id"]) || !isset($body["content"])) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing required fields: user_id, post_id, content"]);
+    echo json_encode(["error" => "Missing required fields: post_id, content"]);
     exit;
 }
 
-$userId  = (int) $body["user_id"];
 $postId  = (int) $body["post_id"];
 $content = trim((string) $body["content"]);
 
-if ($userId <= 0 || $postId <= 0 || $content === "") {
+if ($postId <= 0 || $content === "") {
     http_response_code(400);
-    echo json_encode(["error" => "Invalid user_id, post_id, or empty content"]);
-    exit;
-}
-
-// Verify the user exists
-$userStmt = $db->prepare("SELECT id FROM users WHERE id = :id LIMIT 1");
-$userStmt->execute(["id" => $userId]);
-if (!$userStmt->fetch()) {
-    http_response_code(404);
-    echo json_encode(["error" => "User not found"]);
+    echo json_encode(["error" => "Invalid post_id, or empty content"]);
     exit;
 }
 
