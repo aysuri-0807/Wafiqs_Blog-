@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 	const commentForm = document.querySelector("#create-comment-form");
 	const statusNode = document.querySelector("#comment-status");
-	const userIdInput = document.querySelector("#comment-user-id");
-	const postIdInput = document.querySelector("#comment-post-id");
 	const contentInput = document.querySelector("#comment-content");
 
 	const card = document.querySelector(".reveal-on-load");
@@ -12,13 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		}, 180);
 	}
 	const params = new URLSearchParams(window.location.search);
-	const postIdFromUrl = params.get("post_id");
-	if (postIdFromUrl && postIdInput) {
-		postIdInput.value = postIdFromUrl;
-		postIdInput.readOnly = true; // prevent user from changing it
-	}
+	const postId = Number(params.get("post_id"));
 
-	if (!commentForm || !statusNode || !userIdInput || !postIdInput || !contentInput) {
+	if (!commentForm || !statusNode || !contentInput) {
 		return;
 	}
 
@@ -42,21 +36,32 @@ document.addEventListener("DOMContentLoaded", () => {
 		return new URL(path, window.location.href).toString();
 	};
 
+	const requireLoggedIn = async () => {
+		const getUserUrl = resolveApiUrl("api/auth/get-user.php");
+		if (!getUserUrl) return;
+		try {
+			const resp = await fetch(getUserUrl, { credentials: "same-origin" });
+			const data = await resp.json();
+			if (!data?.authenticated) {
+				window.location.href = "login.php";
+			}
+		} catch {
+			// If session check fails, still allow API to enforce auth.
+		}
+	};
+
+	requireLoggedIn();
+
+	if (!Number.isInteger(postId) || postId <= 0) {
+		setStatus("Missing post context. Open this page from a post.", "error");
+		return;
+	}
+
 	commentForm.addEventListener("submit", async (event) => {
 		event.preventDefault();
 
-		const userId = Number(userIdInput.value);
-		const postId = Number(postIdInput.value);
 		const contentText = contentInput.value.trim();
 
-		if (!Number.isInteger(userId) || userId <= 0) {
-			setStatus("Enter a valid user ID.", "error");
-			return;
-		}
-		if (!Number.isInteger(postId) || postId <= 0) {
-			setStatus("Enter a valid post ID.", "error");
-			return;
-		}
 		if (!contentText) {
 			setStatus("Comment content is required.", "error");
 			return;
@@ -76,8 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
 				headers: {
 					"Content-Type": "application/json",
 				},
+				credentials: "same-origin",
 				body: JSON.stringify({
-					user_id: userId,
 					post_id: postId,
 					content: contentText,
 				}),

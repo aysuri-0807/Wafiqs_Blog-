@@ -13,6 +13,13 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+function columnExists(PDO $db, string $table, string $column): bool
+{
+    $statement = $db->prepare("SHOW COLUMNS FROM `{$table}` LIKE :column_name");
+    $statement->execute(["column_name" => $column]);
+    return $statement->fetch() !== false;
+}
+
 $body = json_decode(file_get_contents("php://input"), true);
 if (!is_array($body)) {
     http_response_code(400);
@@ -20,12 +27,13 @@ if (!is_array($body)) {
     exit;
 }
 
-$identifier = trim((string) ($body["identifier"] ?? $body["username"] ?? $body["email"] ?? ""));
+$identifier = trim((string) ($body["identifier"] ?? ""));
+$username = trim((string) ($body["username"] ?? $identifier));
 $password = (string) ($body["password"] ?? "");
 
-if ($identifier === "" || $password === "") {
+if ($username === "" || $password === "") {
     http_response_code(400);
-    echo json_encode(["error" => "Username/email or password is required"]);
+    echo json_encode(["error" => "Username or password is required"]);
     exit;
 }
 
@@ -36,8 +44,14 @@ if ($idColumnStatement->fetch() === false) {
     $userIdColumn = "user_id";
 }
 
-$statement = $db->prepare("SELECT {$userIdColumn} AS id, username, password_hash, email, show_email FROM users WHERE username = :identifier OR email = :identifier LIMIT 1");
-$statement->execute(["identifier" => $identifier]);
+$hasEmailColumn = columnExists($db, "users", "email");
+$whereClause = "username = :identifier";
+if ($hasEmailColumn) {
+    $whereClause .= " OR email = :identifier";
+}
+
+$statement = $db->prepare("SELECT {$userIdColumn} AS id, username, password_hash, email, show_email FROM users WHERE {$whereClause} LIMIT 1");
+$statement->execute(["identifier" => $username]);
 $user = $statement->fetch();
 
 if (!$user || !password_verify($password, (string) $user["password_hash"])) {

@@ -1,9 +1,27 @@
+const resolveApiUrl = (path) => {
+  if (window.location.protocol === "file:") {
+    return null;
+  }
+
+  return new URL(path, window.location.href).toString();
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   const feedNode = document.querySelector("#post-feed");
   const statusNode = document.querySelector("#feed-status");
+  const accountDropdown = document.querySelector("#account-dropdown");
   const accountMenuButton = document.querySelector("#account-menu-button");
+  const loginLinkWrapper = document.querySelector("#login-link-wrapper");
   const loginLinkButton = document.querySelector("#login-link-button");
   const logoutLink = document.querySelector("#logout-link");
+  const createPostButton = document.getElementById("create-post-button");
+
+  const updateAdminUi = (user) => {
+    const isAdmin = Boolean(user && user.role === "admin");
+    if (createPostButton) {
+      createPostButton.style.visibility = isAdmin ? "visible" : "hidden";
+    }
+  };
 
   const escapeHtml = (value) => {
     return String(value)
@@ -41,24 +59,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const resolveApiUrl = (path) => {
-    if (window.location.protocol === "file:") {
-      return null;
-    }
-
-    return new URL(path, window.location.href).toString();
-  };
-
   const fetchAndRenderPosts = async () => {
     if (!feedNode || !statusNode) return;
 
     const getUserUrl = resolveApiUrl("api/auth/get-user.php");
     let user = null;
     try {
-      const userResp = await fetch(getUserUrl, { credentials: "same-origin" });
-      const userData = await userResp.json();
-      user = userData?.authenticated ? userData.user : null;
-    } catch (e) {
+      if (getUserUrl) {
+        const userResp = await fetch(getUserUrl, { credentials: "same-origin" });
+        const userData = await userResp.json();
+        user = userData?.authenticated ? userData.user : null;
+      }
+    } catch (_error) {
       console.warn("Could not verify user session for delete permissions.");
     }
 
@@ -84,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
         feedNode.innerHTML = "";
         return;
       }
+
       feedNode.addEventListener("click", async (event) => {
         const voteBtn = event.target.closest(".post-vote-btn");
         if (voteBtn) {
@@ -108,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           voteBtn.disabled = true;
           try {
-            const response = await fetch(voteApiUrl, {
+            const voteResponse = await fetch(voteApiUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "same-origin",
@@ -118,8 +131,8 @@ document.addEventListener("DOMContentLoaded", () => {
               }),
             });
 
-            const payload = await response.json().catch(() => null);
-            if (!response.ok || !payload) {
+            const payload = await voteResponse.json().catch(() => null);
+            if (!voteResponse.ok || !payload) {
               throw new Error((payload && payload.error) || "Could not save vote");
             }
 
@@ -146,13 +159,13 @@ document.addEventListener("DOMContentLoaded", () => {
           const postId = btn.dataset.id;
 
           try {
-            const response = await fetch("api/blog/delete-post.php", {
+            const deleteResponse = await fetch("api/blog/delete-post.php", {
               method: "POST",
               credentials: "same-origin",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ post_id: Number(postId) }),
             });
-            if (!response.ok) throw new Error("Failed to delete post");
+            if (!deleteResponse.ok) throw new Error("Failed to delete post");
             btn.closest(".tweet-card")?.remove();
           } catch (error) {
             console.error(error);
@@ -188,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
             : "";
           const postedAt = relativeTimeFromDate(post.created_at);
           const initials = initialsFromAuthor(author);
+
           return `
           <section class="tweet-card p-3 p-md-4 mb-3 reveal-on-load open-post-card" data-post-url="${postUrl}" role="button" tabindex="0" aria-label="Open post ${escapeHtml(title)} in new tab">
 						<div class="d-flex gap-3">
@@ -212,8 +226,9 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .join("");
 
+      updateAdminUi(user);
       renderCardsWithReveal();
-    } catch (error) {
+    } catch (_error) {
       statusNode.textContent =
         "Could not load posts right now. Make sure the PHP server is running and reachable.";
       feedNode.innerHTML = "";
@@ -221,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const updateAuthUi = async () => {
-    if (!accountMenuButton || !loginLinkButton || !logoutLink) return;
+    if (!accountMenuButton || !loginLinkButton || !logoutLink || !accountDropdown || !loginLinkWrapper) return;
     const getUserUrl = resolveApiUrl("api/auth/get-user.php");
     if (!getUserUrl) return;
 
@@ -233,19 +248,23 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = data?.authenticated ? data.user : null;
 
       if (!user) {
-        accountMenuButton.textContent = "Account";
-        loginLinkButton.classList.remove("d-none");
+        accountDropdown.classList.add("d-none");
+        loginLinkWrapper.classList.remove("d-none");
         logoutLink.classList.add("disabled");
         logoutLink.setAttribute("aria-disabled", "true");
+        updateAdminUi(null);
         return;
       }
 
+      accountDropdown.classList.remove("d-none");
+      loginLinkWrapper.classList.add("d-none");
       accountMenuButton.textContent = `@${user.username}`;
-      loginLinkButton.classList.add("d-none");
       logoutLink.classList.remove("disabled");
       logoutLink.removeAttribute("aria-disabled");
+      updateAdminUi(user);
     } catch (_error) {
-      accountMenuButton.textContent = "Account";
+      accountDropdown.classList.add("d-none");
+      loginLinkWrapper.classList.remove("d-none");
     }
   };
 

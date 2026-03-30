@@ -67,18 +67,19 @@ document.addEventListener("DOMContentLoaded", () => {
 	loginForm.addEventListener("submit", async (event) => {
 		event.preventDefault();
 		const formData = new FormData(loginForm);
-		const identifier = String(formData.get("identifier") || "").trim();
+		const username = String(formData.get("username") || "").trim();
+		const identifier = username;
 		const password = String(formData.get("password") || "");
 		const loginApiUrl = resolveApiUrl("api/auth/login.php");
 		if (!loginApiUrl) {
-			setStatus("Start a local PHP server (for example: php -S localhost:8000), then open this page through http://localhost:8000.", "error");
+			setStatus("PHP server not running", "error");
 			return;
 		}
 		setStatus("Logging in...");
 
 		try {
-			const data = await postJson(loginApiUrl, { identifier, password });
-			setStatus(`Welcome back, ${data.user?.username || identifier}! Redirecting...`, "success");
+			const data = await postJson(loginApiUrl, { username, identifier, password });
+			setStatus(`Welcome back, ${data.user?.username || username}! Redirecting...`, "success");
 			setTimeout(() => {
 				window.location.href = "index.html";
 			}, 700);
@@ -96,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		const show_email = Boolean(formData.get("show_email"));
 		const signupApiUrl = resolveApiUrl("api/auth/signup.php");
 		if (!signupApiUrl) {
-			setStatus("Start a local PHP server (for example: php -S localhost:8000), then open this page through http://localhost:8000.", "error");
+			setStatus("PHP server not running", "error");
 			return;
 		}
 

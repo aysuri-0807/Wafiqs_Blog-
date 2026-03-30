@@ -5,6 +5,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
 require_once __DIR__ . "/../db/db.php";
+require_once __DIR__ . "/../auth/guards.php";
 
 // Change this later when role policy is finalized.
 const REQUIRED_POST_ROLE = "admin";
@@ -29,19 +30,18 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 
 $body = json_decode(file_get_contents("php://input"), true);
 
-if (!isset($body["user_id"]) || !isset($body["title"]) || !isset($body["content_json"])) {
+if (!isset($body["title"]) || !isset($body["content_json"])) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing one of required fields: user_id, title, content_json"]);
+    echo json_encode(["error" => "Missing one of required fields: title, content_json"]);
     exit;
 }
 
-$userId = (int) $body["user_id"];
 $title = trim((string) $body["title"]);
 $contentJsonInput = $body["content_json"];
 
-if ($userId <= 0 || $title === "") {
+if ($title === "") {
     http_response_code(400);
-    echo json_encode(["error" => "Invalid user_id or title"]);
+    echo json_encode(["error" => "Invalid title"]);
     exit;
 }
 
@@ -55,33 +55,7 @@ if (!isset($contentJsonInput["comments"]) || !is_array($contentJsonInput["commen
     $contentJsonInput["comments"] = [];
 }
 
-$userIdColumn = columnExists($db, "users", "id") ? "id" : "user_id";
-$hasUserRoleColumn = columnExists($db, "users", "user_role");
-
-$userSelectFields = ["{$userIdColumn} AS id", "username"];
-if ($hasUserRoleColumn) {
-    $userSelectFields[] = "user_role";
-}
-
-$userStatement = $db->prepare("SELECT " . implode(", ", $userSelectFields) . " FROM users WHERE {$userIdColumn} = :user_id LIMIT 1");
-$userStatement->execute(["user_id" => $userId]);
-$user = $userStatement->fetch();
-
-if (!$user) {
-    http_response_code(404);
-    echo json_encode(["error" => "User not found"]);
-    exit;
-}
-
-if ($hasUserRoleColumn && (string) $user["user_role"] !== REQUIRED_POST_ROLE) {
-    http_response_code(403);
-    echo json_encode([
-        "error" => "You do not have permission to create posts",
-        "required_role" => REQUIRED_POST_ROLE,
-        "current_role" => (string) $user["user_role"],
-    ]);
-    exit;
-}
+$user = requireRole($db, REQUIRED_POST_ROLE);
 
 $contentJson = json_encode($contentJsonInput, JSON_UNESCAPED_UNICODE);
 

@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const commentsContainer = document.querySelector("#comments-container");
 	const addCommentLink = document.querySelector("#add-comment-link");
 	let currentUserId = null;
+	let isAdmin = false;
 
 	const params = new URLSearchParams(window.location.search);
 	const postId = params.get("post_id");
@@ -41,18 +42,15 @@ document.addEventListener("DOMContentLoaded", () => {
 		return new URL(path, window.location.href).toString();
 	};
 
-	const fetchCurrentUser = async () => {
+	const fetchViewer = async () => {
 		const url = resolveApiUrl("api/auth/get-user.php");
 		if (!url) return null;
 
 		try {
 			const response = await fetch(url, { credentials: "same-origin" });
-			const payload = await response.json();
-			if (!response.ok || !payload?.authenticated || !payload?.user) {
-				return null;
-			}
-			return payload.user;
-		} catch (_error) {
+			const data = await response.json();
+			return data?.authenticated ? data.user : null;
+		} catch {
 			return null;
 		}
 	};
@@ -122,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	};
 
-	// Star drift animation
 	const starsLayer = document.querySelector(".space-stars");
 	if (starsLayer) {
 		let tick = 0;
@@ -139,7 +136,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		return;
 	}
 
-	// Set the Add Comment link
 	if (addCommentLink) {
 		addCommentLink.href = `create-comment.html?post_id=${encodeURIComponent(postId)}`;
 	}
@@ -184,6 +180,11 @@ document.addEventListener("DOMContentLoaded", () => {
 								<span class="text-secondary">${escapeHtml(postedAt)}</span>
 							</div>
 							<p class="mb-0 post-body">${escapeHtml(body)}</p>
+							<div class="mt-3" style="${isAdmin ? "" : "display:none;"}">
+								<button id="delete-post-button" class="btn btn-outline-danger rounded-pill px-3 fw-semibold" type="button">
+									Delete Post
+								</button>
+							</div>
 						</div>
 					</div>
 				</section>`;
@@ -191,9 +192,37 @@ document.addEventListener("DOMContentLoaded", () => {
 			commentsSection.classList.remove("d-none");
 			revealCards();
 			fetchComments();
-		} catch (err) {
+		} catch (_error) {
 			postStatus.textContent = "Could not load post. Make sure the PHP server is running.";
 		}
+	};
+
+	const wireDelete = () => {
+		postContainer.addEventListener("click", async (event) => {
+			const target = event.target instanceof HTMLElement ? event.target : null;
+			const button = target ? target.closest("#delete-post-button") : null;
+			if (!button) return;
+			if (!isAdmin) return;
+
+			const deleteUrl = resolveApiUrl("api/blog/delete-post.php");
+			if (!deleteUrl) return;
+
+			try {
+				const response = await fetch(deleteUrl, {
+					method: "POST",
+					credentials: "same-origin",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ post_id: Number(postId) }),
+				});
+				const data = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(data.error || "Failed to delete post");
+				}
+				window.location.href = "index.html";
+			} catch (error) {
+				alert(error.message || "Could not delete post.");
+			}
+		});
 	};
 
 	const fetchComments = async () => {
@@ -244,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			}).join("");
 
 			revealCards();
-		} catch (err) {
+		} catch (_error) {
 			commentsStatus.textContent = "Could not load comments.";
 		}
 	};
@@ -257,11 +286,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
-	fetchCurrentUser()
-		.then((user) => {
-			currentUserId = user ? Number(user.id) : null;
-		})
-		.finally(() => {
-			fetchPost();
-		});
+	(async () => {
+		const viewer = await fetchViewer();
+		currentUserId = viewer ? Number(viewer.id) : null;
+		isAdmin = Boolean(viewer && viewer.role === "admin");
+		wireDelete();
+		await fetchPost();
+	})();
 });
