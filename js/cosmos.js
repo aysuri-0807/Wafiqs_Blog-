@@ -1,75 +1,129 @@
 document.addEventListener("DOMContentLoaded", () => {
-  /** @type {HTMLElement | null} */
-  const starsLayer = document.querySelector(".space-stars");
-  const sparklesLayer = document.querySelector(".space-sparkles");
-  const orbitsLayer = document.querySelector(".space-orbits");
-  const navBar = document.querySelector(".cosmic-nav");
-  const mainContainer = document.querySelector("main.container");
-
-  if (!starsLayer) {
+  const root = document.body;
+  if (!root) {
     return;
   }
 
-  const buildSparkles = () => {
-    if (!sparklesLayer) return [];
+  root.classList.add("cosmos-canvas-active");
 
-    const total = window.innerWidth < 700 ? 36 : 64;
-    const fragment = document.createDocumentFragment();
-    const stars = [];
+  const canvas = document.createElement("canvas");
+  canvas.className = "cosmos-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  root.prepend(canvas);
 
-    for (let i = 0; i < total; i += 1) {
-      const sparkle = document.createElement("span");
-      sparkle.className = "sparkle-star";
-      sparkle.style.left = `${Math.random() * 100}%`;
-      sparkle.style.top = `${Math.random() * 100}%`;
-      const size = 1 + Math.random() * 2.8;
-      sparkle.style.width = `${size.toFixed(2)}px`;
-      sparkle.style.height = `${size.toFixed(2)}px`;
-      sparkle.style.setProperty("--sparkle-duration", `${(2 + Math.random() * 5).toFixed(2)}s`);
-      sparkle.style.setProperty("--sparkle-delay", `${(-Math.random() * 6).toFixed(2)}s`);
-      fragment.appendChild(sparkle);
-      stars.push(sparkle);
-    }
-
-    sparklesLayer.replaceChildren(fragment);
-    return stars;
-  };
-
-  const sparkles = buildSparkles();
-
-  setInterval(() => {
-    const randomOpacity = 0.78 + Math.random() * 0.22;
-    const randomGlow = 4 + Math.random() * 9;
-    starsLayer.style.opacity = randomOpacity.toFixed(2);
-    starsLayer.style.filter = `drop-shadow(0 0 ${randomGlow.toFixed(1)}px rgba(187, 228, 255, 0.48))`;
-  }, 380);
-
-  if (sparkles.length > 0) {
-    setInterval(() => {
-      const sparkle = sparkles[Math.floor(Math.random() * sparkles.length)];
-      sparkle.classList.add("is-flare");
-      setTimeout(() => {
-        sparkle.classList.remove("is-flare");
-      }, 180 + Math.random() * 320);
-    }, 130);
+  const context = canvas.getContext("2d", { alpha: true, desynchronized: true });
+  if (!context) {
+    return;
   }
 
-  let pointerTargetX = 0;
-  let pointerTargetY = 0;
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+  let stars = [];
   let pointerX = 0;
   let pointerY = 0;
+  let pointerTargetX = 0;
+  let pointerTargetY = 0;
+  let animationId = 0;
+  let lastFrameTime = 0;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const updatePointerTarget = (clientX, clientY) => {
-    const xPercent = clientX / Math.max(window.innerWidth, 1) - 0.5;
-    const yPercent = clientY / Math.max(window.innerHeight, 1) - 0.5;
-    pointerTargetX = -xPercent * 20;
-    pointerTargetY = -yPercent * 14;
+  const clampDpr = () => Math.min(window.devicePixelRatio || 1, 1.5);
+
+  const randomStar = () => ({
+    x: Math.random() * width,
+    y: Math.random() * height,
+    radius: 0.6 + Math.random() * 1.8,
+    alpha: 0.3 + Math.random() * 0.65,
+    twinkle: 0.5 + Math.random() * 1.7,
+    speed: 0.015 + Math.random() * 0.07,
+    drift: (Math.random() - 0.5) * 0.06,
+    phase: Math.random() * Math.PI * 2,
+  });
+
+  const rebuildStars = () => {
+    const count = Math.max(55, Math.floor((width * height) / 14000));
+    stars = Array.from({ length: count }, randomStar);
   };
 
+  const resize = () => {
+    dpr = clampDpr();
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rebuildStars();
+  };
+
+  const draw = (time) => {
+    context.clearRect(0, 0, width, height);
+
+    pointerX += (pointerTargetX - pointerX) * 0.07;
+    pointerY += (pointerTargetY - pointerY) * 0.07;
+
+    for (let i = 0; i < stars.length; i += 1) {
+      const star = stars[i];
+      const twinkleFactor = 0.72 + Math.sin(time * 0.001 * star.twinkle + star.phase) * 0.28;
+      const alpha = star.alpha * twinkleFactor;
+
+      star.y += star.speed;
+      star.x += star.drift;
+
+      if (star.y > height + 3) {
+        star.y = -3;
+        star.x = Math.random() * width;
+      }
+      if (star.x < -3) {
+        star.x = width + 3;
+      }
+      if (star.x > width + 3) {
+        star.x = -3;
+      }
+
+      const px = star.x + pointerX * 3.8;
+      const py = star.y + pointerY * 2.8;
+
+      context.globalAlpha = alpha;
+      context.fillStyle = "#eaf3ff";
+      context.beginPath();
+      context.arc(px, py, star.radius, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.globalAlpha = 1;
+  };
+
+  const frame = (time) => {
+    if (document.hidden) {
+      animationId = window.requestAnimationFrame(frame);
+      return;
+    }
+
+    if (time - lastFrameTime >= 33) {
+      lastFrameTime = time;
+      draw(time);
+    }
+
+    animationId = window.requestAnimationFrame(frame);
+  };
+
+  const updatePointerTarget = (clientX, clientY) => {
+    pointerTargetX = (clientX / Math.max(width, 1) - 0.5) * -0.9;
+    pointerTargetY = (clientY / Math.max(height, 1) - 0.5) * -0.7;
+  };
+
+  resize();
+  draw(performance.now());
+
+  window.addEventListener("resize", resize, { passive: true });
   window.addEventListener("mousemove", (event) => {
     updatePointerTarget(event.clientX, event.clientY);
   });
-
   window.addEventListener(
     "touchmove",
     (event) => {
@@ -79,38 +133,18 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     { passive: true }
   );
-
   window.addEventListener("mouseleave", () => {
     pointerTargetX = 0;
     pointerTargetY = 0;
   });
 
-  let tick = 0;
-  const animateCosmos = () => {
-    tick += 1;
-    const x = (tick * 0.03) % 360;
-    const y = (tick * 0.012) % 260;
-    starsLayer.style.backgroundPosition = `${x}px ${y}px`;
+  if (!reduceMotion) {
+    animationId = window.requestAnimationFrame(frame);
+  }
 
-    pointerX += (pointerTargetX - pointerX) * 0.07;
-    pointerY += (pointerTargetY - pointerY) * 0.07;
-
-    starsLayer.style.transform = `translate3d(${(pointerX * 1.35).toFixed(2)}px, ${(pointerY * 1.1).toFixed(2)}px, 0)`;
-    if (sparklesLayer) {
-      sparklesLayer.style.transform = `translate3d(${(pointerX * 1.75).toFixed(2)}px, ${(pointerY * 1.45).toFixed(2)}px, 0)`;
+  window.addEventListener("beforeunload", () => {
+    if (animationId) {
+      window.cancelAnimationFrame(animationId);
     }
-    if (orbitsLayer) {
-      orbitsLayer.style.transform = `translate3d(${(pointerX * 1.95).toFixed(2)}px, ${(pointerY * 1.6).toFixed(2)}px, 0)`;
-    }
-    if (navBar) {
-      navBar.style.transform = `translate3d(${(pointerX * 0.16).toFixed(2)}px, ${(pointerY * 0.12).toFixed(2)}px, 0)`;
-    }
-    if (mainContainer) {
-      mainContainer.style.transform = `translate3d(${(pointerX * 0.32).toFixed(2)}px, ${(pointerY * 0.24).toFixed(2)}px, 0)`;
-    }
-
-    requestAnimationFrame(animateCosmos);
-  };
-
-  requestAnimationFrame(animateCosmos);
+  });
 });

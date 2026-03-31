@@ -74,7 +74,14 @@ function requireRole(PDO $db, string $requiredRole): array
 {
     $user = getAuthUser($db);
     $currentRole = (string) ($user["user_role"] ?? "user");
-    if ($currentRole !== $requiredRole) {
+    $roleRank = [
+        "user" => 1,
+        "admin" => 2,
+    ];
+    $requiredRank = $roleRank[$requiredRole] ?? PHP_INT_MAX;
+    $currentRank = $roleRank[$currentRole] ?? 0;
+
+    if ($currentRank < $requiredRank) {
         respondJson(403, [
             "error" => "You do not have permission to perform this action",
             "required_role" => $requiredRole,

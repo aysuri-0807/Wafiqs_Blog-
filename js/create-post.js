@@ -7,7 +7,7 @@
 		return new URL(path, window.location.href).toString();
 	};
 
-	const checkAdminStatus = async () => {
+	const checkPublishAccess = async () => {
 		const getUserUrl = resolveApiUrl("api/auth/get-user.php");
 		if (!getUserUrl) {
 			return;
@@ -20,7 +20,7 @@
 				window.location.href = "login.php";
 				return;
 			}
-			if (user.role !== "admin") {
+			if (String(user.role || "") !== "admin") {
 				window.location.href = "index.html";
 			}
 		} catch (_e) {
@@ -28,7 +28,7 @@
 		}
 	};
 
-	checkAdminStatus();
+	checkPublishAccess();
 
 	document.addEventListener("DOMContentLoaded", () => {
 		/** @type {HTMLFormElement | null} */
@@ -39,20 +39,6 @@
 		const titleInput = document.querySelector("#post-title");
 		/** @type {HTMLTextAreaElement | null} */
 		const contentInput = document.querySelector("#post-content");
-
-		/** @type {HTMLElement | null} */
-		const starsLayer = document.querySelector(".space-stars");
-		if (starsLayer) {
-			let tick = 0;
-			const driftStars = () => {
-				tick += 1;
-				const x = (tick * 0.03) % 340;
-				const y = (tick * 0.012) % 240;
-				starsLayer.style.backgroundPosition = `${x}px ${y}px`;
-				requestAnimationFrame(driftStars);
-			};
-			requestAnimationFrame(driftStars);
-		}
 
 		const card = document.querySelector(".reveal-on-load");
 		if (card) {
@@ -135,8 +121,16 @@
 
 				if (!response.ok) {
 					const apiMessage =
-						(payload && payload.error) || rawBody || "Unable to publish post";
+						(payload && payload.error
+							? payload.details
+								? `${payload.error}: ${payload.details}`
+								: payload.error
+							: rawBody) || "Unable to publish post";
 					throw new Error(apiMessage);
+				}
+
+				if (!payload || !Number.isInteger(Number(payload.post_id)) || Number(payload.post_id) <= 0) {
+					throw new Error("Create-post API did not confirm a persisted post id.");
 				}
 
 				setStatus("Post published. Redirecting to home feed...", "success");

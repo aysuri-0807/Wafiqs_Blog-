@@ -28,6 +28,29 @@ body {
 	overflow-x: hidden;
 }
 
+.cosmos-canvas {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+	opacity: 0.95;
+}
+
+body.cosmos-canvas-active .space-stars,
+body.cosmos-canvas-active .space-sparkles {
+	display: none !important;
+}
+
+body.cosmos-canvas-active .space-orbits {
+	display: block;
+	opacity: 0.75;
+}
+
+body.cosmos-canvas-active .planet {
+	animation: none;
+	box-shadow: inset -10px -12px 18px rgba(0, 0, 0, 0.22), 0 0 14px rgba(138, 204, 255, 0.16);
+}
+
 h1,
 h2,
 h3,
