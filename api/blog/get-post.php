@@ -41,6 +41,7 @@ try {
 
     $select = [
         "p.{$postIdColumn} AS post_id",
+        "p.author_id",
         $hasTitle ? 'p.title' : "'' AS title",
         $authorExpr,
         $hasContentJson

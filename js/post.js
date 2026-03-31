@@ -1,161 +1,172 @@
 document.addEventListener("DOMContentLoaded", () => {
-	const postStatus = document.querySelector("#post-status");
-	const postContainer = document.querySelector("#post-container");
-	const commentsSection = document.querySelector("#comments-section");
-	const commentsStatus = document.querySelector("#comments-status");
-	const commentsContainer = document.querySelector("#comments-container");
-	const addCommentLink = document.querySelector("#add-comment-link");
-	let currentUserId = null;
-	let isAdmin = false;
+  const postStatus = document.querySelector("#post-status");
+  const postContainer = document.querySelector("#post-container");
+  const commentsSection = document.querySelector("#comments-section");
+  const commentsStatus = document.querySelector("#comments-status");
+  const commentsContainer = document.querySelector("#comments-container");
+  const addCommentLink = document.querySelector("#add-comment-link");
+  let currentUserId = null;
+  let isAdmin = false;
 
-	const params = new URLSearchParams(window.location.search);
-	const postId = params.get("post_id");
+  const params = new URLSearchParams(window.location.search);
+  const postId = params.get("post_id");
 
-	const escapeHtml = (value) => {
-		return String(value)
-			.replaceAll("&", "&amp;")
-			.replaceAll("<", "&lt;")
-			.replaceAll(">", "&gt;")
-			.replaceAll('"', "&quot;")
-			.replaceAll("'", "&#39;");
-	};
+  const escapeHtml = (value) => {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  };
 
-	const initialsFromAuthor = (author) => {
-		const parts = String(author).trim().split(/\s+/).filter(Boolean);
-		if (parts.length === 0) return "??";
-		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-		return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
-	};
+  const initialsFromAuthor = (author) => {
+    const parts = String(author).trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "??";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+  };
 
-	const relativeTimeFromDate = (dateValue) => {
-		const ms = new Date(dateValue).getTime();
-		if (Number.isNaN(ms)) return "just now";
-		const deltaSec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-		if (deltaSec < 60) return `${deltaSec}s`;
-		if (deltaSec < 3600) return `${Math.floor(deltaSec / 60)}m`;
-		if (deltaSec < 86400) return `${Math.floor(deltaSec / 3600)}h`;
-		return `${Math.floor(deltaSec / 86400)}d`;
-	};
+  const relativeTimeFromDate = (dateValue) => {
+    const ms = new Date(dateValue).getTime();
+    if (Number.isNaN(ms)) return "just now";
+    const deltaSec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+    if (deltaSec < 60) return `${deltaSec}s`;
+    if (deltaSec < 3600) return `${Math.floor(deltaSec / 60)}m`;
+    if (deltaSec < 86400) return `${Math.floor(deltaSec / 3600)}h`;
+    return `${Math.floor(deltaSec / 86400)}d`;
+  };
 
-	const resolveApiUrl = (path) => {
-		if (window.location.protocol === "file:") return null;
-		return new URL(path, window.location.href).toString();
-	};
+  const resolveApiUrl = (path) => {
+    if (window.location.protocol === "file:") return null;
+    return new URL(path, window.location.href).toString();
+  };
 
-	const fetchViewer = async () => {
-		const url = resolveApiUrl("api/auth/get-user.php");
-		if (!url) return null;
+  const fetchViewer = async () => {
+    const url = resolveApiUrl("api/auth/get-user.php");
+    if (!url) return null;
 
-		try {
-			const response = await fetch(url, { credentials: "same-origin" });
-			const data = await response.json();
-			return data?.authenticated ? data.user : null;
-		} catch {
-			return null;
-		}
-	};
+    try {
+      const response = await fetch(url, { credentials: "same-origin" });
+      const data = await response.json();
+      return data?.authenticated ? data.user : null;
+    } catch {
+      return null;
+    }
+  };
 
-	const handleCommentVote = async (button) => {
-		const commentId = Number(button.dataset.commentId);
-		const voteType = button.dataset.voteType;
-		const card = button.closest(".comment-card");
+  const handleCommentVote = async (button) => {
+    const commentId = Number(button.dataset.commentId);
+    const voteType = button.dataset.voteType;
+    const card = button.closest(".comment-card");
 
-		if (!Number.isInteger(commentId) || commentId <= 0 || (voteType !== "like" && voteType !== "dislike") || !card) {
-			return;
-		}
+    if (
+      !Number.isInteger(commentId) ||
+      commentId <= 0 ||
+      (voteType !== "like" && voteType !== "dislike") ||
+      !card
+    ) {
+      return;
+    }
 
-		if (!currentUserId) {
-			commentsStatus.textContent = "Log in first to vote on comments.";
-			setTimeout(() => {
-				window.location.href = "login.php";
-			}, 700);
-			return;
-		}
+    if (!currentUserId) {
+      commentsStatus.textContent = "Log in first to vote on comments.";
+      setTimeout(() => {
+        window.location.href = "login.php";
+      }, 700);
+      return;
+    }
 
-		const url = resolveApiUrl("api/blog/vote-comment.php");
-		if (!url) {
-			commentsStatus.textContent = "Could not reach vote API.";
-			return;
-		}
+    const url = resolveApiUrl("api/blog/vote-comment.php");
+    if (!url) {
+      commentsStatus.textContent = "Could not reach vote API.";
+      return;
+    }
 
-		button.disabled = true;
+    button.disabled = true;
 
-		try {
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				credentials: "same-origin",
-				body: JSON.stringify({
-					comment_id: commentId,
-					vote_type: voteType,
-				}),
-			});
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          comment_id: commentId,
+          vote_type: voteType,
+        }),
+      });
 
-			const payload = await response.json().catch(() => null);
-			if (!response.ok || !payload) {
-				throw new Error((payload && payload.error) || "Could not save vote");
-			}
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload) {
+        throw new Error((payload && payload.error) || "Could not save vote");
+      }
 
-			const likesNode = card.querySelector("[data-role='comment-likes']");
-			const dislikesNode = card.querySelector("[data-role='comment-dislikes']");
-			if (likesNode) likesNode.textContent = String(Number(payload.likes || 0));
-			if (dislikesNode) dislikesNode.textContent = String(Number(payload.dislikes || 0));
+      const likesNode = card.querySelector("[data-role='comment-likes']");
+      const dislikesNode = card.querySelector("[data-role='comment-dislikes']");
+      if (likesNode) likesNode.textContent = String(Number(payload.likes || 0));
+      if (dislikesNode)
+        dislikesNode.textContent = String(Number(payload.dislikes || 0));
 
-			card.querySelectorAll(".comment-vote-btn").forEach((voteButton) => {
-				const selected = voteButton.dataset.voteType === payload.user_vote;
-				voteButton.classList.toggle("is-active", Boolean(selected));
-			});
-		} catch (error) {
-			commentsStatus.textContent = error.message || "Could not save vote.";
-		} finally {
-			button.disabled = false;
-		}
-	};
+      card.querySelectorAll(".comment-vote-btn").forEach((voteButton) => {
+        const selected = voteButton.dataset.voteType === payload.user_vote;
+        voteButton.classList.toggle("is-active", Boolean(selected));
+      });
+    } catch (error) {
+      commentsStatus.textContent = error.message || "Could not save vote.";
+    } finally {
+      button.disabled = false;
+    }
+  };
 
-	const revealCards = () => {
-		document.querySelectorAll(".reveal-on-load").forEach((card, i) => {
-			setTimeout(() => card.classList.add("is-visible"), 180 + i * 100);
-		});
-	};
+  const revealCards = () => {
+    document.querySelectorAll(".reveal-on-load").forEach((card, i) => {
+      setTimeout(() => card.classList.add("is-visible"), 180 + i * 100);
+    });
+  };
 
-	if (!postId) {
-		postStatus.textContent = "No post specified.";
-		return;
-	}
+  if (!postId) {
+    postStatus.textContent = "No post specified.";
+    return;
+  }
 
-	if (addCommentLink) {
-		addCommentLink.href = `create-comment.html?post_id=${encodeURIComponent(postId)}`;
-	}
+  if (addCommentLink) {
+    addCommentLink.href = `create-comment.html?post_id=${encodeURIComponent(postId)}`;
+  }
 
-	const fetchPost = async () => {
-		const url = resolveApiUrl(`api/blog/get-post.php?post_id=${encodeURIComponent(postId)}`);
-		if (!url) {
-			postStatus.textContent = "Start a local PHP server (php -S localhost:8000) and open via http://localhost:8000.";
-			return;
-		}
+  const fetchPost = async () => {
+    const url = resolveApiUrl(
+      `api/blog/get-post.php?post_id=${encodeURIComponent(postId)}`,
+    );
+    if (!url) {
+      postStatus.textContent =
+        "Start a local PHP server (php -S localhost:8000) and open via http://localhost:8000.";
+      return;
+    }
 
-		try {
-			const response = await fetch(url);
-			const data = await response.json();
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
 
-			if (!response.ok || !data.post) {
-				postStatus.textContent = data.error || "Post not found.";
-				return;
-			}
+      if (!response.ok || !data.post) {
+        postStatus.textContent = data.error || "Post not found.";
+        return;
+      }
 
-			const post = data.post;
-			const author = post.author || "Unknown";
-			const title = post.title || "Untitled";
-			const body = post.body_text || "";
-			const postedAt = relativeTimeFromDate(post.created_at);
-			const initials = initialsFromAuthor(author);
+      const post = data.post;
+      const author = post.author || "Unknown";
+      const title = post.title || "Untitled";
+      const body = post.body_text || "";
+      const postedAt = relativeTimeFromDate(post.created_at);
+      const initials = initialsFromAuthor(author);
+      const isAuthor = currentUserId === Number(post.author_id);
+      const canDelete = isAdmin && isAuthor;
 
-			postStatus.textContent = "";
-			document.title = `${title} | Wafiq's Blog`;
+      postStatus.textContent = "";
+      document.title = `${title} | Wafiq's Blog`;
 
-			postContainer.innerHTML = `
+      postContainer.innerHTML = `
 				<section class="tweet-card p-3 p-md-4 mb-4 reveal-on-load">
 					<div class="d-flex gap-3">
 						<div class="avatar-dot">${escapeHtml(initials)}</div>
@@ -169,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 								<span class="text-secondary">${escapeHtml(postedAt)}</span>
 							</div>
 							<p class="mb-0 post-body">${escapeHtml(body)}</p>
-							<div class="mt-3" style="${isAdmin ? "" : "display:none;"}">
+							<div class="mt-3" style="${canDelete ? "" : "display:none;"}">
 								<button id="delete-post-button" class="btn btn-outline-danger rounded-pill px-3 fw-semibold" type="button">
 									Delete Post
 								</button>
@@ -178,66 +189,73 @@ document.addEventListener("DOMContentLoaded", () => {
 					</div>
 				</section>`;
 
-			commentsSection.classList.remove("d-none");
-			revealCards();
-			fetchComments();
-		} catch (_error) {
-			postStatus.textContent = "Could not load post. Make sure the PHP server is running.";
-		}
-	};
+      commentsSection.classList.remove("d-none");
+      revealCards();
+      fetchComments();
+    } catch (_error) {
+      postStatus.textContent =
+        "Could not load post. Make sure the PHP server is running.";
+    }
+  };
 
-	const wireDelete = () => {
-		postContainer.addEventListener("click", async (event) => {
-			const target = event.target instanceof HTMLElement ? event.target : null;
-			const button = target ? target.closest("#delete-post-button") : null;
-			if (!button) return;
-			if (!isAdmin) return;
+  const wireDelete = () => {
+    postContainer.addEventListener("click", async (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const button = target ? target.closest("#delete-post-button") : null;
+      if (!button) return;
+      if (!isAdmin) return;
 
-			const deleteUrl = resolveApiUrl("api/blog/delete-post.php");
-			if (!deleteUrl) return;
+      const deleteUrl = resolveApiUrl("api/blog/delete-post.php");
+      if (!deleteUrl) return;
 
-			try {
-				const response = await fetch(deleteUrl, {
-					method: "POST",
-					credentials: "same-origin",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ post_id: Number(postId) }),
-				});
-				const data = await response.json().catch(() => ({}));
-				if (!response.ok) {
-					throw new Error(data.error || "Failed to delete post");
-				}
-				window.location.href = "index.html";
-			} catch (error) {
-				alert(error.message || "Could not delete post.");
-			}
-		});
-	};
+      try {
+        const response = await fetch(deleteUrl, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ post_id: Number(postId) }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to delete post");
+        }
+        window.location.href = "index.html";
+      } catch (error) {
+        alert(error.message || "Could not delete post.");
+      }
+    });
+  };
 
-	const fetchComments = async () => {
-		const url = resolveApiUrl(`api/blog/get-comments.php?post_id=${encodeURIComponent(postId)}`);
-		if (!url) return;
+  const fetchComments = async () => {
+    const url = resolveApiUrl(
+      `api/blog/get-comments.php?post_id=${encodeURIComponent(postId)}`,
+    );
+    if (!url) return;
 
-		try {
-			const response = await fetch(url);
-			const data = await response.json();
-			const comments = Array.isArray(data.comments) ? data.comments : [];
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      const comments = Array.isArray(data.comments) ? data.comments : [];
 
-			if (comments.length === 0) {
-				commentsStatus.textContent = "No comments yet. Be the first!";
-				commentsContainer.innerHTML = "";
-				return;
-			}
+      if (comments.length === 0) {
+        commentsStatus.textContent = "No comments yet. Be the first!";
+        commentsContainer.innerHTML = "";
+        return;
+      }
 
-			commentsStatus.textContent = `${comments.length} comment${comments.length !== 1 ? "s" : ""}`;
-			commentsContainer.innerHTML = comments.map((comment) => {
-				const author = comment.author || "Unknown";
-				const initials = initialsFromAuthor(author);
-				const postedAt = relativeTimeFromDate(comment.created_at);
-				const likes = Number(comment.likes || 0);
-				const dislikes = Number(comment.dislikes || 0);
-				const userVote = comment.user_vote === "like" || comment.user_vote === "dislike" ? comment.user_vote : null;
-				return `
+      commentsStatus.textContent = `${comments.length} comment${comments.length !== 1 ? "s" : ""}`;
+      commentsContainer.innerHTML = comments
+        .map((comment) => {
+          const author = comment.author || "Unknown";
+          const initials = initialsFromAuthor(author);
+          const postedAt = relativeTimeFromDate(comment.created_at);
+          const likes = Number(comment.likes || 0);
+          const dislikes = Number(comment.dislikes || 0);
+          const userVote =
+            comment.user_vote === "like" || comment.user_vote === "dislike"
+              ? comment.user_vote
+              : null;
+          return `
 					<div class="tweet-card p-3 mb-2 reveal-on-load comment-card">
 						<div class="d-flex gap-3">
 							<div class="avatar-dot" style="width:36px;height:36px;font-size:0.75rem;">${escapeHtml(initials)}</div>
@@ -259,27 +277,28 @@ document.addEventListener("DOMContentLoaded", () => {
 							</div>
 						</div>
 					</div>`;
-			}).join("");
+        })
+        .join("");
 
-			revealCards();
-		} catch (_error) {
-			commentsStatus.textContent = "Could not load comments.";
-		}
-	};
+      revealCards();
+    } catch (_error) {
+      commentsStatus.textContent = "Could not load comments.";
+    }
+  };
 
-	if (commentsContainer) {
-		commentsContainer.addEventListener("click", async (event) => {
-			const button = event.target.closest(".comment-vote-btn");
-			if (!button) return;
-			await handleCommentVote(button);
-		});
-	}
+  if (commentsContainer) {
+    commentsContainer.addEventListener("click", async (event) => {
+      const button = event.target.closest(".comment-vote-btn");
+      if (!button) return;
+      await handleCommentVote(button);
+    });
+  }
 
-	(async () => {
-		const viewer = await fetchViewer();
-		currentUserId = viewer ? Number(viewer.id) : null;
-		isAdmin = Boolean(viewer && viewer.role === "admin");
-		wireDelete();
-		await fetchPost();
-	})();
+  (async () => {
+    const viewer = await fetchViewer();
+    currentUserId = viewer ? Number(viewer.id) : null;
+    isAdmin = Boolean(viewer && viewer.role === "admin");
+    wireDelete();
+    await fetchPost();
+  })();
 });
