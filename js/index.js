@@ -66,7 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let user = null;
     try {
       if (getUserUrl) {
-        const userResp = await fetch(getUserUrl, { credentials: "same-origin" });
+        const userResp = await fetch(getUserUrl, {
+          credentials: "same-origin",
+        });
         const userData = await userResp.json();
         user = userData?.authenticated ? userData.user : null;
       }
@@ -104,7 +106,12 @@ document.addEventListener("DOMContentLoaded", () => {
           const voteType = voteBtn.dataset.voteType;
           const card = voteBtn.closest(".tweet-card");
 
-          if (!Number.isInteger(postId) || postId <= 0 || (voteType !== "like" && voteType !== "dislike") || !card) {
+          if (
+            !Number.isInteger(postId) ||
+            postId <= 0 ||
+            (voteType !== "like" && voteType !== "dislike") ||
+            !card
+          ) {
             return;
           }
 
@@ -133,13 +140,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const payload = await voteResponse.json().catch(() => null);
             if (!voteResponse.ok || !payload) {
-              throw new Error((payload && payload.error) || "Could not save vote");
+              throw new Error(
+                (payload && payload.error) || "Could not save vote",
+              );
             }
 
             const likesNode = card.querySelector("[data-role='post-likes']");
-            const dislikesNode = card.querySelector("[data-role='post-dislikes']");
-            if (likesNode) likesNode.textContent = String(Number(payload.likes || 0));
-            if (dislikesNode) dislikesNode.textContent = String(Number(payload.dislikes || 0));
+            const dislikesNode = card.querySelector(
+              "[data-role='post-dislikes']",
+            );
+            if (likesNode)
+              likesNode.textContent = String(Number(payload.likes || 0));
+            if (dislikesNode)
+              dislikesNode.textContent = String(Number(payload.dislikes || 0));
 
             card.querySelectorAll(".post-vote-btn").forEach((button) => {
               const selected = button.dataset.voteType === payload.user_vote;
@@ -193,11 +206,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const likes = Number(post.likes || 0);
           const dislikes = Number(post.dislikes || 0);
           const commentCount = Number(post.comment_count || 0);
-          const userVote = post.user_vote === "like" || post.user_vote === "dislike" ? post.user_vote : null;
+          const userVote =
+            post.user_vote === "like" || post.user_vote === "dislike"
+              ? post.user_vote
+              : null;
           const postUrl = `post.html?post_id=${escapeHtml(post.post_id)}`;
           const canDelete = user && Number(user.id) === Number(post.author_id);
           const deleteAction = canDelete
-            ? `<span class="text-danger cursor-pointer delete-btn" data-id="${escapeHtml(post.post_id)}">Delete</span>`
+            ? `<span class="text-danger cursor-pointer delete-btn" style="cursor: pointer;" data-id="${escapeHtml(post.post_id)}">Delete</span>`
             : "";
           const postedAt = relativeTimeFromDate(post.created_at);
           const initials = initialsFromAuthor(author);
@@ -236,7 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const updateAuthUi = async () => {
-    if (!accountMenuButton || !loginLinkButton || !logoutLink || !accountDropdown || !loginLinkWrapper) return;
+    if (
+      !accountMenuButton ||
+      !loginLinkButton ||
+      !logoutLink ||
+      !accountDropdown ||
+      !loginLinkWrapper
+    )
+      return;
     const getUserUrl = resolveApiUrl("api/auth/get-user.php");
     if (!getUserUrl) return;
 
