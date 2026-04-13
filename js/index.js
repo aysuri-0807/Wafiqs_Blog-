@@ -9,12 +9,61 @@ const resolveApiUrl = (path) => {
 document.addEventListener("DOMContentLoaded", () => {
   const feedNode = document.querySelector("#post-feed");
   const statusNode = document.querySelector("#feed-status");
+  const feedAlertNode = document.querySelector("#feed-alert");
   const accountDropdown = document.querySelector("#account-dropdown");
   const accountMenuButton = document.querySelector("#account-menu-button");
   const loginLinkWrapper = document.querySelector("#login-link-wrapper");
   const loginLinkButton = document.querySelector("#login-link-button");
   const logoutLink = document.querySelector("#logout-link");
   const createPostButton = document.getElementById("create-post-button");
+  const postSortSelect = document.getElementById("post-sort");
+  const SORT_STORAGE_KEY = "homepagePostSort";
+  const VALID_SORTS = new Set([
+    "newest",
+    "most-liked",
+    "most-controversial",
+    "trending",
+  ]);
+  let allPosts = [];
+
+  const setFeedAlert = (message) => {
+    if (!feedAlertNode) return;
+    feedAlertNode.textContent = message;
+  };
+
+  const clearFeedAlert = () => {
+    if (!feedAlertNode) return;
+    feedAlertNode.textContent = "";
+  };
+
+  const showSortBar = () => {
+    statusNode?.classList.remove("d-none");
+  };
+
+  const hideSortBar = () => {
+    statusNode?.classList.add("d-none");
+  };
+
+  const loadSavedSort = () => {
+    try {
+      const savedSort = window.localStorage.getItem(SORT_STORAGE_KEY) || "";
+      if (VALID_SORTS.has(savedSort)) {
+        return savedSort;
+      }
+    } catch (_error) {
+      // Continue with default sort if storage is unavailable.
+    }
+    return "newest";
+  };
+
+  const saveSort = (sortValue) => {
+    if (!VALID_SORTS.has(sortValue)) return;
+    try {
+      window.localStorage.setItem(SORT_STORAGE_KEY, sortValue);
+    } catch (_error) {
+      // Ignore storage failures so sorting still works in memory.
+    }
+  };
 
   const updateAdminUi = (user) => {
     const isAdmin = Boolean(user && user.role === "admin");
@@ -59,8 +108,91 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
+  const sortedPosts = (posts, sortBy) => {
+    const copy = [...posts];
+    const numeric = (value) => Number(value || 0);
+    const timestamp = (value) => new Date(value || 0).getTime() || 0;
+
+    switch (sortBy) {
+      case "most-liked":
+        return copy.sort((a, b) => numeric(b.likes) - numeric(a.likes));
+      case "most-controversial":
+        return copy.sort((a, b) => numeric(b.dislikes) - numeric(a.dislikes));
+      case "trending":
+        return copy.sort(
+          (a, b) => numeric(b.comment_count) - numeric(a.comment_count),
+        );
+      case "newest":
+      default:
+        return copy.sort((a, b) => timestamp(b.created_at) - timestamp(a.created_at));
+    }
+  };
+
+  const renderPosts = (posts, user, { animate = false } = {}) => {
+    if (!feedNode) return;
+
+    if (posts.length === 0) {
+      feedNode.innerHTML = "";
+      return;
+    }
+
+    feedNode.innerHTML = posts
+      .map((post) => {
+        const author = post.author || "Unknown";
+        const title = post.title || "Untitled";
+        const body = post.body_text || "";
+        const likes = Number(post.likes || 0);
+        const dislikes = Number(post.dislikes || 0);
+        const commentCount = Number(post.comment_count || 0);
+        const userVote =
+          post.user_vote === "like" || post.user_vote === "dislike"
+            ? post.user_vote
+            : null;
+        const postUrl = `post.html?post_id=${escapeHtml(post.post_id)}`;
+        const canDelete = user && Number(user.id) === Number(post.author_id);
+        const deleteAction = canDelete
+          ? `<span class="text-danger cursor-pointer delete-btn" style="cursor: pointer;" data-id="${escapeHtml(post.post_id)}">Delete</span>`
+          : "";
+        const postedAt = relativeTimeFromDate(post.created_at);
+        const initials = initialsFromAuthor(author);
+
+        return `
+          <section class="tweet-card p-3 p-md-4 mb-3 ${animate ? "reveal-on-load" : ""} open-post-card" data-post-url="${postUrl}" role="button" tabindex="0" aria-label="Open post ${escapeHtml(title)}">
+            <div class="d-flex gap-3">
+              <div class="avatar-dot">${escapeHtml(initials)}</div>
+              <div class="w-100">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                  <a href="${postUrl}" class="text-decoration-none open-post-link" style="color:inherit;"><strong>${escapeHtml(title)}</strong></a>
+                  <span class="text-secondary">@${escapeHtml(author)}</span>
+                  <span class="text-secondary">&middot;</span>
+                  <span class="text-secondary">${escapeHtml(postedAt)}</span>
+                </div>
+                <p class="mb-2 text-secondary post-body">${escapeHtml(body)}</p>
+                <div class="d-flex gap-3 text-secondary small post-actions">
+                  <a href="${postUrl}" class="text-decoration-none text-secondary open-post-link">Comments (${escapeHtml(commentCount)})</a>
+                  <button type="button" class="post-vote-btn vote-chip vote-like ${userVote === "like" ? "is-active" : ""}" data-id="${escapeHtml(post.post_id)}" data-vote-type="like">Like <span data-role="post-likes">${escapeHtml(likes)}</span></button>
+                  <button type="button" class="post-vote-btn vote-chip vote-dislike ${userVote === "dislike" ? "is-active" : ""}" data-id="${escapeHtml(post.post_id)}" data-vote-type="dislike">Dislike <span data-role="post-dislikes">${escapeHtml(dislikes)}</span></button>
+                  ${deleteAction}
+                </div>
+              </div>
+            </div>
+          </section>`;
+      })
+      .join("");
+
+    if (animate) {
+      renderCardsWithReveal();
+    }
+  };
+
+  const applySortAndRender = (user, { animate = false } = {}) => {
+    const selectedSort = postSortSelect?.value || "newest";
+    const orderedPosts = sortedPosts(allPosts, selectedSort);
+    renderPosts(orderedPosts, user, { animate });
+  };
+
   const fetchAndRenderPosts = async () => {
-    if (!feedNode || !statusNode) return;
+    if (!feedNode) return;
 
     const getUserUrl = resolveApiUrl("api/auth/get-user.php");
     let user = null;
@@ -78,8 +210,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const postsApiUrl = resolveApiUrl("api/blog/get-posts.php");
     if (!postsApiUrl) {
-      statusNode.textContent =
-        "Start a local PHP server (for example: php -S localhost:8000), then open this page through http://localhost:8000.";
+      hideSortBar();
+      setFeedAlert(
+        "Start a local PHP server (for example: php -S localhost:8000), then open this page through http://localhost:8000.",
+      );
       feedNode.innerHTML = "";
       return;
     }
@@ -92,10 +226,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await response.json();
       const posts = Array.isArray(data.posts) ? data.posts : [];
+      allPosts = posts;
 
       if (posts.length === 0) {
-        statusNode.textContent = "No posts yet.";
+        hideSortBar();
+        setFeedAlert("No posts yet.");
         feedNode.innerHTML = "";
+        updateAdminUi(user);
         return;
       }
 
@@ -194,59 +331,25 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!postUrl) return;
 
         event.preventDefault();
-        window.open(postUrl, "_blank", "noopener");
+        window.location.href = postUrl;
       });
+      showSortBar();
+      clearFeedAlert();
+      applySortAndRender(user, { animate: true });
 
-      statusNode.textContent = "Latest posts";
-      feedNode.innerHTML = posts
-        .map((post) => {
-          const author = post.author || "Unknown";
-          const title = post.title || "Untitled";
-          const body = post.body_text || "";
-          const likes = Number(post.likes || 0);
-          const dislikes = Number(post.dislikes || 0);
-          const commentCount = Number(post.comment_count || 0);
-          const userVote =
-            post.user_vote === "like" || post.user_vote === "dislike"
-              ? post.user_vote
-              : null;
-          const postUrl = `post.html?post_id=${escapeHtml(post.post_id)}`;
-          const canDelete = user && Number(user.id) === Number(post.author_id);
-          const deleteAction = canDelete
-            ? `<span class="text-danger cursor-pointer delete-btn" style="cursor: pointer;" data-id="${escapeHtml(post.post_id)}">Delete</span>`
-            : "";
-          const postedAt = relativeTimeFromDate(post.created_at);
-          const initials = initialsFromAuthor(author);
-
-          return `
-          <section class="tweet-card p-3 p-md-4 mb-3 reveal-on-load open-post-card" data-post-url="${postUrl}" role="button" tabindex="0" aria-label="Open post ${escapeHtml(title)} in new tab">
-						<div class="d-flex gap-3">
-							<div class="avatar-dot">${escapeHtml(initials)}</div>
-							<div class="w-100">
-								<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                  <a href="${postUrl}" class="text-decoration-none open-post-link" style="color:inherit;"><strong>${escapeHtml(title)}</strong></a>
-									<span class="text-secondary">@${escapeHtml(author)}</span>
-									<span class="text-secondary">&middot;</span>
-									<span class="text-secondary">${escapeHtml(postedAt)}</span>
-								</div>
-								<p class="mb-2 text-secondary post-body">${escapeHtml(body)}</p>
-								<div class="d-flex gap-3 text-secondary small post-actions">
-                  <a href="${postUrl}" class="text-decoration-none text-secondary open-post-link">Comments (${escapeHtml(commentCount)})</a>
-                  <button type="button" class="post-vote-btn vote-chip vote-like ${userVote === "like" ? "is-active" : ""}" data-id="${escapeHtml(post.post_id)}" data-vote-type="like">Like <span data-role="post-likes">${escapeHtml(likes)}</span></button>
-                  <button type="button" class="post-vote-btn vote-chip vote-dislike ${userVote === "dislike" ? "is-active" : ""}" data-id="${escapeHtml(post.post_id)}" data-vote-type="dislike">Dislike <span data-role="post-dislikes">${escapeHtml(dislikes)}</span></button>
-                  ${deleteAction}
-								</div>
-							</div>
-						</div>
-					</section>`;
-        })
-        .join("");
+      if (postSortSelect) {
+        postSortSelect.addEventListener("change", () => {
+          saveSort(postSortSelect.value);
+          applySortAndRender(user);
+        });
+      }
 
       updateAdminUi(user);
-      renderCardsWithReveal();
     } catch (_error) {
-      statusNode.textContent =
-        "Could not load posts right now. Make sure the PHP server is running and reachable.";
+      hideSortBar();
+      setFeedAlert(
+        "Could not load posts right now. Make sure the PHP server is running and reachable.",
+      );
       feedNode.innerHTML = "";
     }
   };
@@ -312,6 +415,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   };
+
+  if (postSortSelect) {
+    postSortSelect.value = loadSavedSort();
+  }
 
   fetchAndRenderPosts();
   updateAuthUi();

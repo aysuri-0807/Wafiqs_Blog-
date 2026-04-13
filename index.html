@@ -64,7 +64,17 @@
         </p>
       </header>
 
-      <div id="feed-status" class="feed-subtitle mb-3">Loading posts...</div>
+      <div id="feed-status" class="feed-status-row mb-2 d-none">
+        <span class="feed-subtitle">Sort By:</span>
+        <label for="post-sort" class="visually-hidden">Sort posts</label>
+        <select id="post-sort" class="cosmic-sort-select">
+          <option value="newest" selected>Newest</option>
+          <option value="most-liked">Most liked</option>
+          <option value="most-controversial">Most controversial</option>
+          <option value="trending">Trending</option>
+        </select>
+      </div>
+      <div id="feed-alert" class="feed-subtitle mb-3">Loading posts...</div>
       <div id="post-feed" aria-live="polite"></div>
     </div>
   </main>
