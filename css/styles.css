@@ -481,9 +481,25 @@ h3,
   color: #ffb3b3;
 }
 
+.author-link {
+  color: var(--cosmic-muted);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition:
+    color 0.2s ease,
+    text-decoration-color 0.2s ease;
+}
+
+.author-link:hover,
+.author-link:focus {
+  color: #7a8ba8 !important;
+  text-decoration-color: #7a8ba8 !important;
+}
+
 .avatar-dot {
   width: 48px;
   height: 48px;
+  
   border-radius: 50%;
   display: inline-flex;
   align-items: center;

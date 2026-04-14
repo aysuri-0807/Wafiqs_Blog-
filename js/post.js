@@ -162,6 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const initials = initialsFromAuthor(author);
       const isAuthor = currentUserId === Number(post.author_id);
       const canDelete = isAdmin && isAuthor;
+      const profileUrl = `profile.html?username=${encodeURIComponent(author)}`;
 
       postStatus.textContent = "";
       document.title = `${title} | Wafiq's Blog`;
@@ -175,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
 								<h1 class="h4 fw-bold mb-0">${escapeHtml(title)}</h1>
 							</div>
 							<div class="d-flex gap-2 mb-2">
-								<span class="text-secondary">@${escapeHtml(author)}</span>
+								<a href="${escapeHtml(profileUrl)}" class="author-link">@${escapeHtml(author)}</a>
 								<span class="text-secondary">&middot;</span>
 								<span class="text-secondary">${escapeHtml(postedAt)}</span>
 							</div>
@@ -255,13 +256,14 @@ document.addEventListener("DOMContentLoaded", () => {
             comment.user_vote === "like" || comment.user_vote === "dislike"
               ? comment.user_vote
               : null;
+          const profileUrl = `profile.html?username=${encodeURIComponent(author)}`;
           return `
 					<div class="tweet-card p-3 mb-2 reveal-on-load comment-card">
 						<div class="d-flex gap-3">
 							<div class="avatar-dot" style="width:36px;height:36px;font-size:0.75rem;">${escapeHtml(initials)}</div>
 							<div class="w-100">
 								<div class="d-flex gap-2 mb-1">
-									<strong>@${escapeHtml(author)}</strong>
+									<a href="${escapeHtml(profileUrl)}" class="author-link"><strong>@${escapeHtml(author)}</strong></a>
 									<span class="text-secondary">&middot;</span>
 									<span class="text-secondary">${escapeHtml(postedAt)}</span>
 								</div>

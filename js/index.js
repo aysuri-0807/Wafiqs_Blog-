@@ -10,12 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const feedNode = document.querySelector("#post-feed");
   const statusNode = document.querySelector("#feed-status");
   const feedAlertNode = document.querySelector("#feed-alert");
-  const accountDropdown = document.querySelector("#account-dropdown");
-  const accountMenuButton = document.querySelector("#account-menu-button");
-  const loginLinkWrapper = document.querySelector("#login-link-wrapper");
-  const loginLinkButton = document.querySelector("#login-link-button");
-  const logoutLink = document.querySelector("#logout-link");
-  const createPostButton = document.getElementById("create-post-button");
   const postSortSelect = document.getElementById("post-sort");
   const SORT_STORAGE_KEY = "homepagePostSort";
   const VALID_SORTS = new Set([
@@ -62,13 +56,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.localStorage.setItem(SORT_STORAGE_KEY, sortValue);
     } catch (_error) {
       // Ignore storage failures so sorting still works in memory.
-    }
-  };
-
-  const updateAdminUi = (user) => {
-    const isAdmin = Boolean(user && user.role === "admin");
-    if (createPostButton) {
-      createPostButton.style.visibility = isAdmin ? "visible" : "hidden";
     }
   };
 
@@ -149,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ? post.user_vote
             : null;
         const postUrl = `post.html?post_id=${escapeHtml(post.post_id)}`;
+        const profileUrl = `profile.html?username=${encodeURIComponent(author)}`;
         const canDelete = user && Number(user.id) === Number(post.author_id);
         const deleteAction = canDelete
           ? `<span class="text-danger cursor-pointer delete-btn" style="cursor: pointer;" data-id="${escapeHtml(post.post_id)}">Delete</span>`
@@ -163,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="w-100">
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                   <a href="${postUrl}" class="text-decoration-none open-post-link" style="color:inherit;"><strong>${escapeHtml(title)}</strong></a>
-                  <span class="text-secondary">@${escapeHtml(author)}</span>
+                  <a href="${profileUrl}" class="author-link">@${escapeHtml(author)}</a>
                   <span class="text-secondary">&middot;</span>
                   <span class="text-secondary">${escapeHtml(postedAt)}</span>
                 </div>
@@ -232,7 +220,6 @@ document.addEventListener("DOMContentLoaded", () => {
         hideSortBar();
         setFeedAlert("No posts yet.");
         feedNode.innerHTML = "";
-        updateAdminUi(user);
         return;
       }
 
@@ -335,7 +322,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       showSortBar();
       clearFeedAlert();
-      applySortAndRender(user, { animate: true });
 
       if (postSortSelect) {
         postSortSelect.addEventListener("change", () => {
@@ -344,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      updateAdminUi(user);
+      applySortAndRender(user, { animate: true });
     } catch (_error) {
       hideSortBar();
       setFeedAlert(
@@ -354,73 +340,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const updateAuthUi = async () => {
-    if (
-      !accountMenuButton ||
-      !loginLinkButton ||
-      !logoutLink ||
-      !accountDropdown ||
-      !loginLinkWrapper
-    )
-      return;
-    const getUserUrl = resolveApiUrl("api/auth/get-user.php");
-    if (!getUserUrl) return;
-
-    try {
-      const response = await fetch(getUserUrl, {
-        credentials: "same-origin",
-      });
-      const data = await response.json();
-      const user = data?.authenticated ? data.user : null;
-
-      if (!user) {
-        accountDropdown.classList.add("d-none");
-        loginLinkWrapper.classList.remove("d-none");
-        logoutLink.classList.add("disabled");
-        logoutLink.setAttribute("aria-disabled", "true");
-        updateAdminUi(null);
-        return;
-      }
-
-      accountDropdown.classList.remove("d-none");
-      loginLinkWrapper.classList.add("d-none");
-      accountMenuButton.textContent = `@${user.username}`;
-      logoutLink.classList.remove("disabled");
-      logoutLink.removeAttribute("aria-disabled");
-      updateAdminUi(user);
-    } catch (_error) {
-      accountDropdown.classList.add("d-none");
-      loginLinkWrapper.classList.remove("d-none");
-    }
-  };
-
-  const wireLogout = () => {
-    if (!logoutLink) return;
-    logoutLink.addEventListener("click", async (event) => {
-      event.preventDefault();
-      if (logoutLink.classList.contains("disabled")) return;
-      const logoutUrl = resolveApiUrl("api/auth/logout.php");
-      if (!logoutUrl) {
-        window.location.href = "login.php";
-        return;
-      }
-
-      try {
-        await fetch(logoutUrl, {
-          method: "POST",
-          credentials: "same-origin",
-        });
-      } finally {
-        window.location.href = "login.php";
-      }
-    });
-  };
-
   if (postSortSelect) {
     postSortSelect.value = loadSavedSort();
   }
 
   fetchAndRenderPosts();
-  updateAuthUi();
-  wireLogout();
 });

@@ -30,7 +30,6 @@
     <nav class="navbar navbar-expand-lg border-bottom sticky-top cosmic-nav">
       <div class="container-fluid px-4 px-lg-5">
         <a class="navbar-brand fw-bold" href="index.html">Wafiq's Postulations</a>
-        <a class="btn btn-outline-info rounded-pill px-3 ms-auto" href="index.html">Back Home</a>
       </div>
     </nav>
 
