@@ -294,20 +294,37 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = event.target.closest(".delete-btn");
         if (btn) {
           const postId = btn.dataset.id;
+          const card = btn.closest(".tweet-card");
 
-          try {
-            const deleteResponse = await fetch("api/blog/delete-post.php", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ post_id: Number(postId) }),
-            });
-            if (!deleteResponse.ok) throw new Error("Failed to delete post");
-            btn.closest(".tweet-card")?.remove();
-          } catch (error) {
-            console.error(error);
-            alert("Could not delete post.");
-          }
+          const modalEl = document.getElementById("deleteConfirmModal");
+          const confirmBtn = document.getElementById("confirmDeleteBtn");
+          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+          // Clone button to remove any previous listener
+          const newConfirmBtn = confirmBtn.cloneNode(true);
+          confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+          newConfirmBtn.addEventListener("click", async () => {
+            newConfirmBtn.disabled = true;
+            newConfirmBtn.textContent = "Deleting\u2026";
+            try {
+              const deleteResponse = await fetch("api/blog/delete-post.php", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ post_id: Number(postId) }),
+              });
+              if (!deleteResponse.ok) throw new Error("Failed to delete post");
+              modal.hide();
+              card?.remove();
+            } catch (error) {
+              console.error(error);
+              modal.hide();
+              alert("Could not delete post.");
+            }
+          }, { once: true });
+
+          modal.show();
           return;
         }
 

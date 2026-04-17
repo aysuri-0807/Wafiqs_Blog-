@@ -209,21 +209,37 @@ document.addEventListener("DOMContentLoaded", () => {
       const deleteUrl = resolveApiUrl("api/blog/delete-post.php");
       if (!deleteUrl) return;
 
-      try {
-        const response = await fetch(deleteUrl, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ post_id: Number(postId) }),
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to delete post");
+      const modalEl = document.getElementById("deleteConfirmModal");
+      const confirmBtn = document.getElementById("confirmDeleteBtn");
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+      // Clone button to remove any previous listener
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+      newConfirmBtn.addEventListener("click", async () => {
+        newConfirmBtn.disabled = true;
+        newConfirmBtn.textContent = "Deleting\u2026";
+        try {
+          const response = await fetch(deleteUrl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ post_id: Number(postId) }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to delete post");
+          }
+          modal.hide();
+          window.location.href = "index.html";
+        } catch (error) {
+          modal.hide();
+          alert(error.message || "Could not delete post.");
         }
-        window.location.href = "index.html";
-      } catch (error) {
-        alert(error.message || "Could not delete post.");
-      }
+      }, { once: true });
+
+      modal.show();
     });
   };
 
