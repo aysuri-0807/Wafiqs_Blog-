@@ -184,10 +184,11 @@ CREATE TABLE
 
 - Implement backend API for creating and retrieving posts
 - Develop frontend UI for displaying posts on homepage
+- [NEW] Implement post deletion (soft delete logic) on home page (`index.js`)
 
 ### Shiva
 
-- [REVISED] Implement post deletion (soft delete logic)
+- [REVISED] Implement post deletion (soft delete logic) on comments page (`post.js`)
 - [REVISED] Implement comment deletion (soft delete logic)
   - [REVISED] Admins can delete any comment, other users can delete their own comments
 - [REVISED] Update UI to be consistent with comment deletion
