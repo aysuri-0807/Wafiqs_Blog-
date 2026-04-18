@@ -198,13 +198,18 @@ CREATE TABLE
 
 - Implement authentication system (login/signup)
 - Handle session management and user state
+  - [REVISED] Fixed auth states around the site
 - Develop profile editing functionality
+  - [REVISED] Profile page includes functionality for updating user's email, email publicity, password and username (while making sure the username has not been taken)
+- [NEW] Added profile page that simply shows the user's name and their email if they have the display option on
+- [REVISED] Changed users' name from a `p` tag to a `link` tag so that their name in the comments is clickable and directs to their profile
 
 ### Steve
 
 - Implement comment system (CRUD operations)
 - Develop UI for displaying comments
-- Implement like/dislike functionality for comments
+- Implement like/dislike functionality for posts and comments
+- [REVISED] Added delete button confirmation for posts and comments
 
 ## 6. Wireframes
 
@@ -269,7 +274,7 @@ CREATE TABLE
 
 **Feedback Collected After Presenting First Increment:**
 
-The following quotes are from client discussions and the project client information notes.
+[NEW] The following quotes are from client discussions and the project client information notes.
 
 > "I want a blog post to be able to share my interesting thoughts and realizations with the world. Users are more likely to be mobile, this would be something that you look at on the most convenient device (most likely a mobile phone)."
 
@@ -294,18 +299,10 @@ The following quotes are from client discussions and the project client informat
 
 **[REVISED] Changes Made to the Plan Based on This Feedback (Specific + Reasons):**
 
-- [REVISED] Maintained and emphasized mobile-first implementation in layout and testing priorities.
-  - Reason: Client explicitly said users are mostly mobile.
-- [REVISED] Strengthened accessibility requirements in implementation notes (alt text, readable sizing, contrast, keyboard support).
-  - Reason: Client explicitly requested WCAG-oriented accessibility.
-- [REVISED] Preserved celestial visual direction as a non-optional design requirement.
-  - Reason: Client requested thematic consistency with the concept of the blog.
-- [REVISED] Enforced role-based authoring permissions: only Wafiq can create posts; authenticated users can comment and vote.
-  - Reason: Client asked for owner-only posting and user interaction features.
-- [REVISED] Continued soft delete for posts and added soft delete for comments in team responsibilities.
-  - Reason: Supports moderation and recovery rather than irreversible deletion.
-- [REVISED] Removed a separate admin dashboard from immediate scope.
-  - Reason: Existing role-based session checks and conditional UI can satisfy admin controls with less implementation overhead.
+- [REVISED] Soft delete for posts kept and added soft delete for comments.
+  - Reason: Allows for easy moderation and makes sure nothing on frontend is irreversible.
+- [REVISED] Removed a separate admin dashboard.
+  - Reason: Role based session checks and conditional UI satisfies admin controls as is.
 
 **Finished Product Reaction:**
 
