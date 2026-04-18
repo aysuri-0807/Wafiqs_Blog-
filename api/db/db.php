@@ -46,6 +46,7 @@ try {
     addColumnIfNotExists($db, 'comments', 'likes', 'INT NOT NULL DEFAULT 0');
     addColumnIfNotExists($db, 'comments', 'dislikes', 'INT NOT NULL DEFAULT 0');
     addColumnIfNotExists($db, 'comments', 'updated_at', 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+    addColumnIfNotExists($db, 'comments', 'deleted_at', 'DATETIME NULL');
 
     // Votes
     $db->exec("CREATE TABLE IF NOT EXISTS post_votes (

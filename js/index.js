@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const feedAlertNode = document.querySelector("#feed-alert");
   const postSortSelect = document.getElementById("post-sort");
   const SORT_STORAGE_KEY = "homepagePostSort";
+  const COMMENT_DELETE_QUEUE_KEY = "pendingCommentDeletes";
   const VALID_SORTS = new Set([
     "newest",
     "most-liked",
@@ -19,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "trending",
   ]);
   let allPosts = [];
+  let currentUser = null;
 
   const setFeedAlert = (message) => {
     if (!feedAlertNode) return;
@@ -111,8 +113,65 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       case "newest":
       default:
-        return copy.sort((a, b) => timestamp(b.created_at) - timestamp(a.created_at));
+        return copy.sort(
+          (a, b) => timestamp(b.created_at) - timestamp(a.created_at),
+        );
     }
+  };
+
+  const readPendingCommentDeletes = () => {
+    try {
+      const rawValue = window.localStorage.getItem(COMMENT_DELETE_QUEUE_KEY);
+      const parsedValue = rawValue ? JSON.parse(rawValue) : [];
+      return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch (_error) {
+      return [];
+    }
+  };
+
+  const clearPendingCommentDeletes = () => {
+    try {
+      window.localStorage.removeItem(COMMENT_DELETE_QUEUE_KEY);
+    } catch (_error) {
+      // Ignore storage failures so the feed still renders.
+    }
+  };
+
+  const applyPendingCommentDeletes = (posts) => {
+    const pendingDeletes = readPendingCommentDeletes();
+    if (pendingDeletes.length === 0) return posts;
+
+    const deleteCountsByPostId = new Map();
+    pendingDeletes.forEach((entry) => {
+      const postId = Number(entry && entry.postId);
+      if (!Number.isInteger(postId) || postId <= 0) return;
+      deleteCountsByPostId.set(
+        postId,
+        (deleteCountsByPostId.get(postId) || 0) + 1,
+      );
+    });
+
+    if (deleteCountsByPostId.size === 0) {
+      clearPendingCommentDeletes();
+      return posts;
+    }
+
+    const updatedPosts = posts.map((post) => {
+      const postId = Number(post.post_id);
+      const deleteCount = deleteCountsByPostId.get(postId) || 0;
+      if (deleteCount <= 0) return post;
+
+      return {
+        ...post,
+        comment_count: Math.max(
+          0,
+          Number(post.comment_count || 0) - deleteCount,
+        ),
+      };
+    });
+
+    clearPendingCommentDeletes();
+    return updatedPosts;
   };
 
   const renderPosts = (posts, user, { animate = false } = {}) => {
@@ -139,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const profileUrl = `profile.html?username=${encodeURIComponent(author)}`;
         const canDelete = user && Number(user.id) === Number(post.author_id);
         const deleteAction = canDelete
-          ? `<span class="text-danger cursor-pointer delete-btn" style="cursor: pointer;" data-id="${escapeHtml(post.post_id)}">Delete</span>`
+          ? `<span class="text-danger vote-chip delete-post-btn" data-id="${escapeHtml(post.post_id)}">Delete</span>`
           : "";
         const postedAt = relativeTimeFromDate(post.created_at);
         const initials = initialsFromAuthor(author);
@@ -214,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await response.json();
       const posts = Array.isArray(data.posts) ? data.posts : [];
-      allPosts = posts;
+      allPosts = applyPendingCommentDeletes(posts);
 
       if (posts.length === 0) {
         hideSortBar();
@@ -291,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        const btn = event.target.closest(".delete-btn");
+        const btn = event.target.closest(".delete-post-btn");
         if (btn) {
           const postId = btn.dataset.id;
           const card = btn.closest(".tweet-card");
@@ -304,25 +363,35 @@ document.addEventListener("DOMContentLoaded", () => {
           const newConfirmBtn = confirmBtn.cloneNode(true);
           confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
-          newConfirmBtn.addEventListener("click", async () => {
-            newConfirmBtn.disabled = true;
-            newConfirmBtn.textContent = "Deleting\u2026";
-            try {
-              const deleteResponse = await fetch("api/blog/delete-post.php", {
-                method: "POST",
-                credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ post_id: Number(postId) }),
-              });
-              if (!deleteResponse.ok) throw new Error("Failed to delete post");
-              modal.hide();
-              card?.remove();
-            } catch (error) {
-              console.error(error);
-              modal.hide();
-              alert("Could not delete post.");
-            }
-          }, { once: true });
+          newConfirmBtn.addEventListener(
+            "click",
+            async () => {
+              newConfirmBtn.disabled = true;
+              newConfirmBtn.textContent = "Deleting\u2026";
+              try {
+                const deleteResponse = await fetch("api/blog/delete-post.php", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ post_id: Number(postId) }),
+                });
+                if (!deleteResponse.ok)
+                  throw new Error("Failed to delete post");
+                modal.hide();
+                if (card) {
+                  card.classList.add("is-deleting");
+                  setTimeout(() => {
+                    card.remove();
+                  }, 400);
+                }
+              } catch (error) {
+                console.error(error);
+                modal.hide();
+                alert("Could not delete post.");
+              }
+            },
+            { once: true },
+          );
 
           modal.show();
           return;
@@ -343,11 +412,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (postSortSelect) {
         postSortSelect.addEventListener("change", () => {
           saveSort(postSortSelect.value);
-          applySortAndRender(user);
+          applySortAndRender(currentUser);
         });
       }
 
-      applySortAndRender(user, { animate: true });
+      currentUser = user;
+      applySortAndRender(currentUser, { animate: true });
     } catch (_error) {
       hideSortBar();
       setFeedAlert(
@@ -360,6 +430,24 @@ document.addEventListener("DOMContentLoaded", () => {
   if (postSortSelect) {
     postSortSelect.value = loadSavedSort();
   }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key !== COMMENT_DELETE_QUEUE_KEY || !event.newValue) return;
+    if (!allPosts.length) return;
+
+    allPosts = applyPendingCommentDeletes(allPosts);
+    applySortAndRender(currentUser, { animate: false });
+  });
+
+  window.addEventListener("pageshow", () => {
+    if (!allPosts.length) return;
+
+    const updatedPosts = applyPendingCommentDeletes(allPosts);
+    if (updatedPosts === allPosts) return;
+
+    allPosts = updatedPosts;
+    applySortAndRender(currentUser, { animate: false });
+  });
 
   fetchAndRenderPosts();
 });

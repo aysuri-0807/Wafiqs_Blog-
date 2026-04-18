@@ -42,6 +42,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return new URL(path, window.location.href).toString();
   };
 
+  const queueCommentDelete = (postId) => {
+    if (!Number.isInteger(postId) || postId <= 0) return;
+
+    try {
+      const rawValue = window.localStorage.getItem("pendingCommentDeletes");
+      const queue = rawValue ? JSON.parse(rawValue) : [];
+      const nextQueue = Array.isArray(queue) ? queue : [];
+      nextQueue.push({ postId, deletedAt: Date.now() });
+      window.localStorage.setItem(
+        "pendingCommentDeletes",
+        JSON.stringify(nextQueue),
+      );
+    } catch (_error) {
+      // Ignore storage failures; the comment has still been deleted.
+    }
+  };
+
   const fetchViewer = async () => {
     const url = resolveApiUrl("api/auth/get-user.php");
     if (!url) return null;
@@ -124,6 +141,16 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".reveal-on-load").forEach((card, i) => {
       setTimeout(() => card.classList.add("is-visible"), 180 + i * 100);
     });
+  };
+
+  const updateCommentsStatusFromDom = () => {
+    if (!commentsContainer || !commentsStatus) return;
+    const count = commentsContainer.querySelectorAll(".comment-card").length;
+    if (count === 0) {
+      commentsStatus.textContent = "No comments yet. Be the first!";
+      return;
+    }
+    commentsStatus.textContent = `${count} comment${count !== 1 ? "s" : ""}`;
   };
 
   if (!postId) {
@@ -217,27 +244,31 @@ document.addEventListener("DOMContentLoaded", () => {
       const newConfirmBtn = confirmBtn.cloneNode(true);
       confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
-      newConfirmBtn.addEventListener("click", async () => {
-        newConfirmBtn.disabled = true;
-        newConfirmBtn.textContent = "Deleting\u2026";
-        try {
-          const response = await fetch(deleteUrl, {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ post_id: Number(postId) }),
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to delete post");
+      newConfirmBtn.addEventListener(
+        "click",
+        async () => {
+          newConfirmBtn.disabled = true;
+          newConfirmBtn.textContent = "Deleting\u2026";
+          try {
+            const response = await fetch(deleteUrl, {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ post_id: Number(postId) }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to delete post");
+            }
+            modal.hide();
+            window.location.href = "index.html";
+          } catch (error) {
+            modal.hide();
+            alert(error.message || "Could not delete post.");
           }
-          modal.hide();
-          window.location.href = "index.html";
-        } catch (error) {
-          modal.hide();
-          alert(error.message || "Could not delete post.");
-        }
-      }, { once: true });
+        },
+        { once: true },
+      );
 
       modal.show();
     });
@@ -264,6 +295,13 @@ document.addEventListener("DOMContentLoaded", () => {
       commentsContainer.innerHTML = comments
         .map((comment) => {
           const author = comment.author || "Unknown";
+          const author_id = comment.author_id || "Unknown";
+          const canDelete =
+            currentUserId === Number(comment.author_id) || isAdmin;
+          const deleteAction = canDelete
+            ? `<button type="button" class="text-danger vote-chip delete-comment-btn"
+      data-comment-id="${escapeHtml(comment.comment_id)}">Delete</button>`
+            : "";
           const initials = initialsFromAuthor(author);
           const postedAt = relativeTimeFromDate(comment.created_at);
           const likes = Number(comment.likes || 0);
@@ -291,6 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									<button type="button" class="comment-vote-btn vote-chip vote-dislike ${userVote === "dislike" ? "is-active" : ""}" data-comment-id="${escapeHtml(comment.comment_id)}" data-vote-type="dislike">
 										Dislike <span data-role="comment-dislikes">${escapeHtml(dislikes)}</span>
 									</button>
+                  ${deleteAction}
 								</div>
 							</div>
 						</div>
@@ -300,15 +339,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
       revealCards();
     } catch (_error) {
+      console.error(_error);
       commentsStatus.textContent = "Could not load comments.";
     }
   };
 
   if (commentsContainer) {
     commentsContainer.addEventListener("click", async (event) => {
-      const button = event.target.closest(".comment-vote-btn");
-      if (!button) return;
-      await handleCommentVote(button);
+      const voteBtn = event.target.closest(".comment-vote-btn");
+      if (voteBtn) {
+        await handleCommentVote(voteBtn);
+        return;
+      }
+
+      const deleteBtn = event.target.closest(".delete-comment-btn");
+      if (!deleteBtn) return;
+
+      const commentId = Number(deleteBtn.dataset.commentId);
+      if (!Number.isInteger(commentId) || commentId <= 0) return;
+
+      try {
+        const url = resolveApiUrl("api/blog/delete-comment.php");
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ comment_id: commentId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "Delete failed");
+
+        queueCommentDelete(Number(postId));
+        const commentCard = deleteBtn.closest(".comment-card");
+        if (commentCard) {
+          commentCard.classList.add("is-deleting");
+          setTimeout(() => {
+            commentCard.remove();
+            updateCommentsStatusFromDom();
+          }, 400);
+        } else {
+          updateCommentsStatusFromDom();
+        }
+      } catch (err) {
+        commentsStatus.textContent = err.message || "Could not delete comment.";
+      }
     });
   }
 

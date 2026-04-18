@@ -25,8 +25,14 @@ if ($postId <= 0) {
 }
 
 $sql = "
-    SELECT c.id AS comment_id, c.content, c.likes, c.dislikes, c.created_at,
-           u.username AS author";
+    SELECT c.id AS comment_id,
+           c.content,
+           c.likes,
+           c.dislikes,
+           c.created_at,
+           c.user_id AS author_id,
+           u.username AS author
+";
 
 if ($hasCommentVotes && $currentUserId > 0) {
     $sql .= ", cv.vote_type AS user_vote";
@@ -36,14 +42,18 @@ if ($hasCommentVotes && $currentUserId > 0) {
 
 $sql .= "
     FROM comments c
-    LEFT JOIN users u ON u.id = c.user_id";
+    LEFT JOIN users u ON u.id = c.user_id
+";
 
 if ($hasCommentVotes && $currentUserId > 0) {
-    $sql .= " LEFT JOIN comment_votes cv ON cv.comment_id = c.id AND cv.user_id = :current_user_id";
+    $sql .= " LEFT JOIN comment_votes cv 
+              ON cv.comment_id = c.id 
+             AND cv.user_id = :current_user_id";
 }
 
 $sql .= "
     WHERE c.post_id = :post_id
+      AND c.deleted_at IS NULL
     ORDER BY c.created_at ASC
 ";
 

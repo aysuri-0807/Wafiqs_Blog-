@@ -39,6 +39,7 @@ try {
 } catch (Throwable $error) {
 	$hasCommentsTable = false;
 }
+$hasCommentDeletedAt = $hasCommentsTable && columnExists($db, 'comments', 'deleted_at');
 
 $authorFallbackExpr = $hasAuthor ? 'p.author' : 'NULL';
 $authorExpr = $hasUsername
@@ -57,7 +58,9 @@ $select = [
 	$hasDislikes ? 'p.dislikes' : '0 AS dislikes',
 	$hasShareCount ? 'p.share_count' : '0 AS share_count',
 	$hasCreatedAt ? 'p.created_at' : 'NULL AS created_at',
-	$hasCommentsTable ? "(SELECT COUNT(*) FROM comments c WHERE c.post_id = p.{$postIdColumn}) AS comment_count" : '0 AS comment_count',
+	$hasCommentsTable
+		? "(SELECT COUNT(*) FROM comments c WHERE c.post_id = p.{$postIdColumn}" . ($hasCommentDeletedAt ? " AND c.deleted_at IS NULL" : "") . ") AS comment_count"
+		: '0 AS comment_count',
 	$hasPostVotes && $currentUserId > 0 ? 'pv.vote_type AS user_vote' : 'NULL AS user_vote',
 ];
 
