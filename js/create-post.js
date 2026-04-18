@@ -67,11 +67,15 @@
 		form.addEventListener("submit", async (event) => {
 			event.preventDefault();
 
+			const submitBtn = form.querySelector("[type='submit']");
+			submitBtn.disabled = true;
+
 			const title = titleInput.value.trim();
 			const contentText = contentInput.value.trim();
 
 			if (!title || !contentText) {
 				setStatus("Title and content are required.", "error");
+				submitBtn.disabled = false;
 				return;
 			}
 
@@ -140,6 +144,7 @@
 				}, 900);
 			} catch (error) {
 				setStatus(error.message || "Something went wrong.", "error");
+				submitBtn.disabled = false;
 			}
 		});
 	});

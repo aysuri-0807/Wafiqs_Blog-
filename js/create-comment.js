@@ -60,10 +60,14 @@ document.addEventListener("DOMContentLoaded", () => {
 	commentForm.addEventListener("submit", async (event) => {
 		event.preventDefault();
 
+		const submitBtn = commentForm.querySelector("[type='submit']");
+		submitBtn.disabled = true;
+
 		const contentText = contentInput.value.trim();
 
 		if (!contentText) {
 			setStatus("Comment content is required.", "error");
+			submitBtn.disabled = false;
 			return;
 		}
 
@@ -110,6 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			}, 900);
 		} catch (error) {
 			setStatus(error.message || "Something went wrong.", "error");
+			submitBtn.disabled = false;
 		}
 	});
 });
